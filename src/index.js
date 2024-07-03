@@ -78,12 +78,23 @@ async function main() {
             }
 
             if (control == BotOptions.Start) {
-                bot.start();
+                await bot.start();
                 continue;
             }
 
             if (control == BotOptions.Stop) {
                 bot.stop();
+                continue;
+            }
+
+            if (control == BotOptions.Console) {
+                bot.getConsole().then((logs) => {
+                    console.log("hello");
+                    logs.forEach(log => {
+                        prompts.log(log);
+                    });
+                });
+                prompts.
                 continue;
             }
 

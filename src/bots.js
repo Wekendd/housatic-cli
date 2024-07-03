@@ -6,18 +6,20 @@ let botdirs;
 let bots = [];
 async function refreshBots() {
     prompts.log.message("Loading ...");
-    prompts.spinner();
+    let spinner = prompts.spinner();
+    spinner.start();
     botdirs = await readdir("./bots/");
     for (let i = 0; i < botdirs.length; i++) {
-        let credentials = JSON.parse(await readFile(`./bots/${botdirs[i]}/credentials.json`, "utf-8"));
+        let config = JSON.parse(await readFile(`./bots/${botdirs[i]}/config.json`, "utf-8"));
 
-        if (credentials == undefined) {
+        if (config == undefined) {
             botdirs.splice(i, 1);
             i--;
             continue;
         }
         bots.push(new Bot(botdirs[i]));
     }
+    spinner.stop();
 }
 
 function getBotDirs() {return botdirs;}

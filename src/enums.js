@@ -1,7 +1,10 @@
 module.exports = {
     BotCommands: {
         Start: 0,
-        Stop: 1
+        Stop: 1,
+        ViewConsole: 2,
+        ReturnConsole: 3,
+        Started: 4,
     },
     MainOptions: {
         Control: 0,

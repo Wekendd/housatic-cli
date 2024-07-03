@@ -1,6 +1,11 @@
 const { readFile } = require('node:fs/promises');
 const { Worker } = require('worker_threads');
 const { BotCommands } = require('../enums');
+const crypto = require('crypto');
+
+function createHash(input) {
+    return crypto.createHash('sha1').update(input ?? '', 'binary').digest('hex').substr(0, 6)
+}
 
 module.exports = class Bot {
     options;
@@ -16,19 +21,39 @@ module.exports = class Bot {
     }
 
     async refresh() {
-        this.options = JSON.parse(await readFile(`./bots/${this.path}/credentials.json`, "utf8"));
-        this.options.host = "localhost" // change to hypixel later
-        // this.options.auth = "microsoft"
-        this.options.port = 53837 // just the port that opening to LAN gave me
+        this.options = {
+            host: "localhost", // will change to hypixel
+            auth: "microsoft",
+            version: "1.8.9",
+            username: this.path,
+            profilesFolder: "./profiles",
+            port: 62203 // remove when not testing on localhost
+        }
     }
 
-    async start() {
-        this.status = true;
-        this.bot.postMessage({ type: BotCommands.Start, options: this.options });
+    start() {
+        return new Promise((resolve, reject) => {
+            this.bot.on("message", (data) => {
+                if (data.type != BotCommands.Started) return;
+                resolve();
+            });
+            this.status = true;
+            this.bot.postMessage({ type: BotCommands.Start, options: this.options });
+        })
     }
 
     async stop() {
         this.status = false;
         this.bot.postMessage({ type: BotCommands.Stop });
+    }
+
+    getConsole() {
+        return new Promise((resolve, reject) => {
+            this.bot.on("message", (data) => {
+                if (data.type != BotCommands.ReturnConsole) return;
+                resolve(data.logs);
+            });
+            this.bot.postMessage({ type: BotCommands.ViewConsole });
+        })
     }
 }
