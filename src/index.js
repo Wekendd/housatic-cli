@@ -1,28 +1,13 @@
-import * as prompts from '@clack/prompts';
-import { refreshBots, botdirs } from './bots';
-import { rmdir } from 'node:fs/promises';
-
-enum MainOptions {
-    Control,
-    Create,
-    Delete,
-    Refresh,
-    Exit
-}
-enum BotOptions {
-    Start,
-    Stop,
-    Refresh,
-    Rename,
-    Console,
-    Done
-}
+const prompts = require('@clack/prompts');
+const { refreshBots, getBotDirs, getBots } = require('./bots');
+const { rmdir } = require('node:fs/promises');
+const { MainOptions, BotOptions } = require('./enums');
 
 async function main() {
     prompts.intro(`Bot Interface`);
     await refreshBots();
-
     while (true) {
+        try {
         const option = await prompts.select({
             message: "Control Panel",
             options: [
@@ -40,15 +25,15 @@ async function main() {
             continue;
         }
 
-        let bot: any;
+        let botdir;
         switch (option) {
             case MainOptions.Control:
             case MainOptions.Delete:
-                var botoptions = botdirs.map((botname, index) => { return { value: index, label: botname } });
+                var botoptions = getBotDirs().map((botname, index) => { return { value: index, label: botname } });
                 botoptions.push({ value: -1, label: "Cancel" })
-                bot = await prompts.select({
+                botdir = await prompts.select({
                     message: "Select a bot",
-                    options: botoptions as any
+                    options: botoptions
                 });
                 break;
             case MainOptions.Create:
@@ -56,9 +41,9 @@ async function main() {
                 break;
         }
 
-        if (option == MainOptions.Create || bot === -1) continue;
+        if (option == MainOptions.Create || botdir === -1) continue;
         if (option == MainOptions.Delete) {
-            await rmdir(`./bots/${botdirs[bot]}`, { recursive: true });
+            await rmdir(`./bots/${getBotDirs()[botdir]}`, { recursive: true });
             await refreshBots();
             continue;
         }
@@ -66,18 +51,21 @@ async function main() {
         /*
             CONTROL
         */
-
-        // Getting the bot instance
+       
+        let bot = getBots()[botdir]; // Getting the bot instance
 
         // Panel
         let controlling = true;
         while (controlling) {
-            let paneloptions: { value: unknown; label: string; hint?: string; }[] = [
+            let paneloptions = [
                 { value: BotOptions.Console, label: "View Console" },
                 { value: BotOptions.Rename, label: "Rename bot" },
                 { value: BotOptions.Done, label: "Done (return to main menu)" }
             ];
-            paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" }) // Eventually turn it into an if statement to add refreshing/stopping dynamics
+            if (bot.status == true) {
+                paneloptions.unshift({ value: BotOptions.Stop, label: "Stop bot"});
+                paneloptions.unshift({ value: BotOptions.Refresh, label: "Refresh bot"});
+            } else paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" });
 
             const control = await prompts.select({
                 message: "What do you want to do?",
@@ -89,11 +77,33 @@ async function main() {
                 continue;
             }
 
+            if (control == BotOptions.Start) {
+                await bot.start();
+                continue;
+            }
+
+            if (control == BotOptions.Stop) {
+                bot.stop();
+                continue;
+            }
+
+            if (control == BotOptions.Console) {
+                bot.getConsole().then((logs) => {
+                    console.log("hello");
+                    logs.forEach(log => {
+                        prompts.log(log);
+                    });
+                });
+                prompts.
+                continue;
+            }
+
             prompts.log.message("No functionality here yet lol");
-        }
+        }} catch (e) {console.log(e)}
     }
 
     prompts.outro("Exiting...");
+    process.exit();
 }
 
 main();
