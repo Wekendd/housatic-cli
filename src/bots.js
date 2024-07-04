@@ -10,14 +10,19 @@ async function refreshBots() {
     spinner.start();
     botdirs = await readdir("./bots/");
     for (let i = 0; i < botdirs.length; i++) {
-        let config = JSON.parse(await readFile(`./bots/${botdirs[i]}/config.json`, "utf-8"));
+        try {
+        let configraw = await readFile(`./bots/${botdirs[i]}/config.json`, "utf-8");
+        let config = JSON.parse(configraw);
 
         if (config == undefined) {
             botdirs.splice(i, 1);
             i--;
             continue;
         }
-        bots.push(new Bot(botdirs[i]));
+        bots.push(new Bot(botdirs[i], config));
+        } catch (e) {
+
+        }
     }
     spinner.stop();
 }

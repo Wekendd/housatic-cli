@@ -65,7 +65,10 @@ async function main() {
             if (bot.status == true) {
                 paneloptions.unshift({ value: BotOptions.Stop, label: "Stop bot"});
                 paneloptions.unshift({ value: BotOptions.Refresh, label: "Refresh bot"});
-            } else paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" });
+            } else {
+                paneloptions.unshift({ value: BotOptions.LogOut, label: "Log Out" });
+                paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" });
+            }
 
             const control = await prompts.select({
                 message: "What do you want to do?",
@@ -89,12 +92,24 @@ async function main() {
 
             if (control == BotOptions.Console) {
                 bot.getConsole().then((logs) => {
-                    console.log("hello");
-                    logs.forEach(log => {
-                        prompts.log(log);
-                    });
+                    prompts.log.message(logs.join("\n"));
                 });
-                prompts.
+                continue;
+            }
+
+            if (control == BotOptions.LogOut) {
+                let spinner = prompts.spinner();
+                spinner.start();
+                await bot.logOut();
+                spinner.stop(); 
+                continue;
+            }
+
+            if (control == BotOptions.Refresh) {
+                let spinner = prompts.spinner();
+                spinner.start();
+                await bot.refresh();
+                spinner.stop();
                 continue;
             }
 

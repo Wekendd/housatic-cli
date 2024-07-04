@@ -5,6 +5,8 @@ module.exports = {
         ViewConsole: 2,
         ReturnConsole: 3,
         Started: 4,
+        Refresh: 5,
+        RefreshDone: 6,
     },
     MainOptions: {
         Control: 0,
@@ -19,6 +21,7 @@ module.exports = {
         Refresh: 2,
         Rename: 3,
         Console: 4,
-        Done: 5
+        Done: 5,
+        LogOut: 6,
     }
 }
