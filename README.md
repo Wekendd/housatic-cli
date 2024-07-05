@@ -1,6 +1,6 @@
 <div align="center"> 
   
-# BotInterface (GUI)
+# BotInterface (CLI)
 
 <img width=794 alt=image src="">
 

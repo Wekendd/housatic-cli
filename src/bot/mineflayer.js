@@ -41,10 +41,30 @@ function reloadEvents(first) {
         let event = events[i];
 
         // custom events (like house_spawn)
+
         if (event.type == "house_spawn") {
             bot.on("spawn", async () => {
                 await sleep(1000);
                 if (inLobby() === false) executeActions(event.actions);
+            });
+        } else
+        // event for chat since we want criterias + mineflayer chat messages are a bit goofy
+        if (event.type == "chat") {
+            let matcher;
+            if (event.criteria.startsWith("/") && event.criteria.endsWith("/")) matcher = new RegExp(event.criteria.substring(1, event.criteria.length - 1));
+                else { // using CT's formatting
+                    let modifiedCriteria = event.criteria.replace(/([\\\(\)\[\]\{\}\?\*\+\^\$\-])/g, "\\$1"); // sanitize it so no stray tokens mess up the regex constructor
+                    modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
+                    modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
+                    matcher = new RegExp("^" + modifiedCriteria);
+                }
+            bot.on("messagestr", (message, username) => {
+                if (username !== "chat") return;
+                if (inLobby() !== false) return;
+                let match = message.match(matcher);
+                if (match) {
+                    executeActions(event.actions, match.groups);
+                }
             });
         }
 
@@ -100,12 +120,17 @@ async function initBot(first) {
     reloadEvents(first);
 }
 
-function executeActions(actions) {
+async function executeActions(actions, args) {
     for (let i = 0; i < actions.length; i++) {
         let action = actions[i];
 
         if (action.type == "chat") {
+            for (let key in args) {
+                action.message = action.message.replaceAll(`\${${key}}`, args[key]);
+            }
             chatqueue.push(action.message);
+        } else if (action.type == "wait") {
+            await sleep(action.length);
         }
     }
 }
