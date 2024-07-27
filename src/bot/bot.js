@@ -26,7 +26,7 @@ module.exports = class Bot {
             auth: "microsoft",
             version: "1.8.9",
             username: this.path,
-            profilesFolder: "./profiles",
+            profilesFolder: "../profiles",
             // port: 62203 // remove when not testing on localhost
         }
     }
@@ -63,7 +63,7 @@ module.exports = class Bot {
                 resolve();
             });
             this.status = true;
-            this.bot.postMessage({ type: BotCommands.Start, options: this.options, config: this.config, events: this.events });
+            this.bot.postMessage({ type: BotCommands.Start, options: this.options, config: this.config, events: this.events, path: this.path });
         })
     }
 
