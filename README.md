@@ -14,6 +14,9 @@ Housatic is a piece of software that helps manage bots in Hypixel Housing. Bots 
 
 This is the CLI version, intended for running the app through command line. For the GUI version, see [here](https://github.com/Wekendd/housatic-gui).
 
+## Installing
+
+Todo
 
 ## Building & running locally
 
