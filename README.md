@@ -1,25 +1,23 @@
 <div align="center"> 
   
-# BotInterface (CLI)
+# Housatic (CLI)
 
-<img width=794 alt=image src="">
+<img width=794 alt=image src="./public/assets/control-panel.png">
 
 A user-friendly bot manager for **Hypixel Housing**.
 </div>
-a
+
 
 ## About
 
-A piece of software for managing bots in Hypixel Housing. Bots are an incredibly useful way to broaden the limits of the Housing ecosystem, allowing for more complex features like block manipulation, advanced math, and more.
+Housatic is a piece of software that helps manage bots in Hypixel Housing. Bots are an incredibly useful way to broaden the limits of the Housing ecosystem, allowing for more complex automated capabilities like block manipulation, data storage, advanced arithmatic, and more.
 
-This is the CLI version, intended for running the app through command line. For the GUI version, see [here](https://github.com/Wekendd/botinterface-gui).
+This is the CLI version, intended for running the app through command line. For the GUI version, see [here](https://github.com/Wekendd/housatic-gui).
 
-## Building
-### Install dependencies ⏬
-```bash
-bun install
-```
-### Start the app ⚒️
-```bash
-bun .
-```
+
+## Building & running locally
+
+1. Install [Node.js](https://nodejs.org/en)
+2. Clone this repo to your local machine
+3. In your local repo directory, run `npm install` to install dependencies
+4. Run `npm .` to start the app

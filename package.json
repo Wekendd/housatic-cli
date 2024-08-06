@@ -1,5 +1,5 @@
 {
-  "name": "botinterface-cli",
+  "name": "housatic-cli",
   "version": "1.0.0",
   "main": "./src/index.js",
   "scripts": {
