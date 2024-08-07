@@ -76,7 +76,7 @@ async function main() {
         */
        
         let bot = getBots()[botdir]; // Getting the bot instance
-
+        
         // Panel
         let controlling = true;
         while (controlling) {

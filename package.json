@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "./src/index.js",
   "bin": "./src/index.js",
+  "pkg": {
+    "scripts": "src/**/*.js",
+    "assets": ["src/**/*.js"]
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "run": "tsc ./src/index.js"

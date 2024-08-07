@@ -1,10 +1,11 @@
 const fs = require("fs");
+const os = require("os");
 
 let platformPath; // okay i made every relavent path thing use this
 if (process.platform == "win32") {
     platformPath = process.env.APPDATA + "/housatic"; // %APPDATA%\housatic
 } else if (process.platform == "linux") {
-    platformPath = "~/housatic"; // ~/housatic
+    platformPath = os.homedir + "/housatic"; // ~/housatic
 } else if (process.platform == "darwin") {
     platformPath = process.env.HOME + "/Library/Application Support/housatic"; // ~/Library/Application Support/housatic
 } else {

@@ -1,5 +1,6 @@
 const { unlink, readdir, readFile } = require('node:fs/promises');
 const { Worker } = require('worker_threads');
+const _path = require('path');
 const { BotCommands } = require('../enums');
 const crypto = require('crypto');
 const platformPath = require('../path');
@@ -20,7 +21,11 @@ module.exports = class Bot {
         this.path = path;
         this.refresh();
         this.status = false;
-        this.bot = new Worker("./src/bot/mineflayer.js");
+        try {
+        this.bot = new Worker(_path.join(__dirname, "./mineflayer.js"));
+        } catch (e) {
+            console.log(e);
+        }
         this.config = config;
         this.options = {
             host: "hypixel.net", // will change to hypixel
