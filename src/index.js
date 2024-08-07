@@ -57,6 +57,7 @@ async function main() {
                 await mkdir(`${platformPath}/bots/${botName}/`);
                 await writeFile(`${platformPath}/bots/${botName}/bot.json`, JSON.stringify({ house: { owner: houseOwner, house_slot: houseSlot, autojoin: autojoin } }));
                 await writeFile(`${platformPath}/bots/${botName}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
+                await mkdir(`${platformPath}/bots/${botName}/logs/`);
                 await refreshBots();
                 spinner.stop();
                 break;
