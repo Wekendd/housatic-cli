@@ -2,6 +2,7 @@
   "name": "housatic-cli",
   "version": "1.0.0",
   "main": "./src/index.js",
+  "bin": "./src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "run": "tsc ./src/index.js"
@@ -13,6 +14,7 @@
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "fs": "^0.0.1-security",
-    "mineflayer": "^4.20.1"
+    "mineflayer": "^4.20.1",
+    "uri-js": "^4.2.2"
   }
 }

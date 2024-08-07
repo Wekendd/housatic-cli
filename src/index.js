@@ -1,10 +1,11 @@
 const prompts = require('@clack/prompts');
 const { refreshBots, getBotDirs, getBots } = require('./bots');
-const { rmdir } = require('node:fs/promises');
+const { rmdir, writeFile, mkdir } = require('node:fs/promises');
 const { MainOptions, BotOptions } = require('./enums');
+const platformPath = require('./path');
 
 async function main() {
-    prompts.intro(`Bot Interface`);
+    prompts.intro(`Housatic`);
     await refreshBots();
     while (true) {
         try {
@@ -38,12 +39,33 @@ async function main() {
                 break;
             case MainOptions.Create:
                 // Create bot menu
+                let botName = await prompts.text({
+                    message: "Bot name"
+                });
+                let houseOwner = await prompts.text({
+                    message: "House owner"
+                });
+                let houseSlot = await prompts.text({
+                    message: "House slot"
+                });
+                let autojoin = await prompts.confirm({
+                    message: "Do you want autojoin enabled?"
+                });
+                
+                let spinner = prompts.spinner();
+                spinner.start();
+                await mkdir(`${platformPath}/bots/${botName}/`);
+                await writeFile(`${platformPath}/bots/${botName}/bot.json`, JSON.stringify({ house: { owner: houseOwner, house_slot: houseSlot, autojoin: autojoin } }));
+                await writeFile(`${platformPath}/bots/${botName}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
+                await refreshBots();
+                spinner.stop();
                 break;
         }
 
-        if (option == MainOptions.Create || botdir === -1) continue;
+        if (botdir === -1 || MainOptions.Create == option) continue;
+
         if (option == MainOptions.Delete) {
-            await rmdir(`./bots/${getBotDirs()[botdir]}`, { recursive: true });
+            await rmdir(`${platformPath}/bots/${getBotDirs()[botdir]}`, { recursive: true });
             await refreshBots();
             continue;
         }
@@ -75,45 +97,42 @@ async function main() {
                 options: paneloptions
             });
     
-            if (control == BotOptions.Done) {
-                controlling = false;
-                continue;
-            }
+            switch (control) {
+                case BotOptions.Done:
+                    controlling = false;
+                    continue;
+                
+                case BotOptions.Start:
+                    await bot.start();
+                    continue;
 
-            if (control == BotOptions.Start) {
-                await bot.start();
-                continue;
-            }
+                case BotOptions.Stop:
+                    bot.stop();
+                    continue;
 
-            if (control == BotOptions.Stop) {
-                bot.stop();
-                continue;
-            }
+                // case BotOptions.Console:
+                //     bot.getConsole().then((logs) => {
+                //         prompts.log.message(logs.join("\n"));
+                //     });
+                //     continue;
 
-            if (control == BotOptions.Console) {
-                bot.getConsole().then((logs) => {
-                    prompts.log.message(logs.join("\n"));
-                });
-                continue;
+                case BotOptions.LogOut:
+                    var spinner = prompts.spinner();
+                    spinner.start();
+                    await bot.logOut();
+                    spinner.stop(); 
+                    continue;
+                
+                case BotOptions.Refresh:
+                    var spinner = prompts.spinner();
+                    spinner.start();
+                    await bot.refresh();
+                    spinner.stop();
+                    continue;
+                
+                default:
+                    prompts.log.message("No functionality here yet lol");
             }
-
-            if (control == BotOptions.LogOut) {
-                let spinner = prompts.spinner();
-                spinner.start();
-                await bot.logOut();
-                spinner.stop(); 
-                continue;
-            }
-
-            if (control == BotOptions.Refresh) {
-                let spinner = prompts.spinner();
-                spinner.start();
-                await bot.refresh();
-                spinner.stop();
-                continue;
-            }
-
-            prompts.log.message("No functionality here yet lol");
         }} catch (e) {console.log(e)}
     }
 

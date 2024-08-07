@@ -2,6 +2,7 @@ const { unlink, readdir, readFile } = require('node:fs/promises');
 const { Worker } = require('worker_threads');
 const { BotCommands } = require('../enums');
 const crypto = require('crypto');
+const platformPath = require('../path');
 
 function createHash(input) {
     return crypto.createHash('sha1').update(input ?? '', 'binary').digest('hex').substr(0, 6)
@@ -26,7 +27,7 @@ module.exports = class Bot {
             auth: "microsoft",
             version: "1.8.9",
             username: this.path,
-            profilesFolder: "../profiles",
+            profilesFolder: `${platformPath}/profiles`,
             // port: 62203 // remove when not testing on localhost
         }
     }
@@ -35,12 +36,12 @@ module.exports = class Bot {
         return new Promise((resolve, reject) => {
             // this is disgusting never let me code again
             try {
-                readFile(`./bots/${this.path}/config.json`, "utf-8").then((configraw) => {
+                readFile(`${platformPath}/bots/${this.path}/bot.json`, "utf-8").then((configraw) => {
                     this.config = JSON.parse(configraw);
                     try {
-                        readFile(`./bots/${this.path}/events.json`, "utf-8").then((eventsraw) => {
+                        readFile(`${platformPath}/bots/${this.path}/events.json`, "utf-8").then((eventsraw) => {
                             this.events = JSON.parse(eventsraw);
-                            this.bot.postMessage({ type: BotCommands.Refresh, config: this.config, events: this.events });
+                            this.bot.postMessage({ type: BotCommands.Refresh, config: this.config, events: this.events, path: this.path });
                             this.bot.on("message", (data) => {
                                 if (data.type != BotCommands.RefreshDone) return;
                                 resolve();
@@ -52,6 +53,7 @@ module.exports = class Bot {
                 });
             } catch (e) {
                 reject();
+                console.log(e);
             }
         });
     }
@@ -84,9 +86,9 @@ module.exports = class Bot {
 
     async logOut() {
         let hash = createHash(this.path);
-        let caches = await readdir(`./profiles/`);
-        if (caches.includes(`${hash}_live-cache.json`)) await unlink(`./profiles/${hash}_live-cache.json`);
-        if (caches.includes(`${hash}_mca-cache.json`)) await unlink(`./profiles/${hash}_mca-cache.json`);
-        if (caches.includes(`${hash}_xbl-cache.json`)) await unlink(`./profiles/${hash}_xbl-cache.json`);
+        let caches = await readdir(`${platformPath}/profiles/`);
+        if (caches.includes(`${hash}_live-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_live-cache.json`);
+        if (caches.includes(`${hash}_mca-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_mca-cache.json`);
+        if (caches.includes(`${hash}_xbl-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_xbl-cache.json`);
     }
 }
