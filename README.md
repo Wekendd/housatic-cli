@@ -24,4 +24,4 @@ This is the CLI version, intended for running the app through command line. For 
 1. Install [Node.js](https://nodejs.org/en)
 2. Clone this repo to your local machine
 3. In your local repo directory, run `npm install` to install dependencies
-4. Run `npm .` to start the app
+4. Run `node .` to start the app
