@@ -5,7 +5,9 @@
   "bin": "./src/index.js",
   "pkg": {
     "scripts": "src/**/*.js",
-    "assets": ["src/**/*.js"]
+    "assets": ["src/**/*.js"],
+    "outputPath": "../",
+    "targets": [ "latest-linux-arm64", "latest-win", "latest-macos", "latest-linux" ]
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
