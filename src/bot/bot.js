@@ -105,7 +105,6 @@ module.exports = class Bot {
     async rename(newName) {
         let hash = createHash(this.path);
         let newHash = createHash(newName);
-        console.log(newHash);
         let caches = await readdir(`${platformPath}/profiles/`);
         if (caches.includes(`${hash}_live-cache.json`)) await rename(`${platformPath}/profiles/${hash}_live-cache.json`, `${platformPath}/profiles/${newHash}_live-cache.json`);
         if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);

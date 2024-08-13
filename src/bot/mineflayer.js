@@ -203,7 +203,9 @@ parentPort.on('message', (msg) => {
             break;
         case BotCommands.Rename:
             path = msg.path;
+            try {
             options.username = msg.path;
+            } catch (e) {}
             break;
         default:
             break;
