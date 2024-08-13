@@ -15,21 +15,17 @@ async function main() {
                 { value: MainOptions.Control, label: "Control a bot" },
                 { value: MainOptions.Create, label: "Create a bot" },
                 { value: MainOptions.Delete, label: "Delete a bot" },
-                { value: MainOptions.Refresh, label: "Refresh bot list" },
                 { value: MainOptions.Exit, label: "Exit the program" }
             ]
         });
 
         if (option == MainOptions.Exit) break;
-        if (option == MainOptions.Refresh) {
-            await refreshBots();
-            continue;
-        }
 
         let botdir;
         switch (option) {
             case MainOptions.Control:
             case MainOptions.Delete:
+                await refreshBots();
                 var botoptions = getBotDirs().map((botname, index) => { return { value: index, label: botname } });
                 botoptions.push({ value: -1, label: "Cancel" })
                 botdir = await prompts.select({

@@ -7,9 +7,6 @@ let botdirs;
 let bots = [];
 
 async function refreshBots() {
-    prompts.log.message("Loading ...");
-    let spinner = prompts.spinner();
-    spinner.start();
     botdirs = await readdir(`${platformPath}/bots/`);
     for (let i = 0; i < botdirs.length; i++) {
         try {
@@ -21,12 +18,14 @@ async function refreshBots() {
                 i--;
                 continue;
             }
-            bots.push(new Bot(botdirs[i], config));
+            if (!bots.some(n => n.path == botdirs[i])) bots.push(new Bot(botdirs[i], config));
         } catch (e) {
 
         }
     }
-    spinner.stop();
+    if (botdirs.length > bots.length) {
+        bots = bots.filter(n => botdirs.includes(n.path));
+    }
 }
 
 function getBotDirs() {return botdirs;}

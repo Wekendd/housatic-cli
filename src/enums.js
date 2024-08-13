@@ -12,8 +12,7 @@ module.exports = {
         Control: 0,
         Create: 1,
         Delete: 2,
-        Refresh: 3,
-        Exit: 4
+        Exit: 3
     },
     BotOptions: {
         Start: 0,
