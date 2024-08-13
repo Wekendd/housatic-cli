@@ -201,6 +201,10 @@ parentPort.on('message', (msg) => {
 
             parentPort.postMessage({ type: BotCommands.RefreshDone });
             break;
+        case BotCommands.Rename:
+            path = msg.path;
+            options.username = msg.path;
+            break;
         default:
             break;
     }

@@ -7,6 +7,7 @@ module.exports = {
         Started: 4,
         Refresh: 5,
         RefreshDone: 6,
+        Rename: 7,
     },
     MainOptions: {
         Control: 0,

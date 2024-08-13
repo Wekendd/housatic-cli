@@ -1,4 +1,4 @@
-const { unlink, readdir, readFile } = require('node:fs/promises');
+const { unlink, readdir, readFile, rename, mkdir, stat, rmdir } = require('node:fs/promises');
 const { Worker } = require('worker_threads');
 const _path = require('path');
 const { BotCommands } = require('../enums');
@@ -22,18 +22,17 @@ module.exports = class Bot {
         this.refresh();
         this.status = false;
         try {
-        this.bot = new Worker(_path.join(__dirname, "./mineflayer.js"));
+            this.bot = new Worker(_path.join(__dirname, "./mineflayer.js"));
         } catch (e) {
             console.log(e);
         }
         this.config = config;
         this.options = {
-            host: "hypixel.net", // will change to hypixel
+            host: "hypixel.net",
             auth: "microsoft",
             version: "1.8.9",
             username: this.path,
             profilesFolder: `${platformPath}/profiles`,
-            // port: 62203 // remove when not testing on localhost
         }
     }
 
@@ -101,5 +100,45 @@ module.exports = class Bot {
         if (caches.includes(`${hash}_live-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_live-cache.json`);
         if (caches.includes(`${hash}_mca-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_mca-cache.json`);
         if (caches.includes(`${hash}_xbl-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_xbl-cache.json`);
+    }
+
+    async rename(newName) {
+        let hash = createHash(this.path);
+        let newHash = createHash(newName);
+        console.log(newHash);
+        let caches = await readdir(`${platformPath}/profiles/`);
+        if (caches.includes(`${hash}_live-cache.json`)) await rename(`${platformPath}/profiles/${hash}_live-cache.json`, `${platformPath}/profiles/${newHash}_live-cache.json`);
+        if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);
+        if (caches.includes(`${hash}_xbl-cache.json`)) await rename(`${platformPath}/profiles/${hash}_xbl-cache.json`, `${platformPath}/profiles/${newHash}_xbl-cache.json`);
+        this.bot.postMessage({ type: BotCommands.Rename, path: newName });
+        await renameDir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
+        this.path = newName;
+        this.options.username = newName;
+    }
+}
+
+async function renameDir(oldPath, newPath) {
+    try {
+        // Create the new directory if it doesn't exist
+        await mkdir(newPath, { recursive: true });
+
+        // Read the contents of the old directory
+        let contents = await readdir(oldPath);
+
+        // Recursively rename each item
+        for (let item of contents) {
+            let oldItemPath = _path.join(oldPath, item);
+            let newItemPath = _path.join(newPath, item);
+            let itemStats = await stat(oldItemPath);
+
+            if (itemStats.isDirectory()) {
+                await renameDir(oldItemPath, newItemPath);
+            } else {
+                await rename(oldItemPath, newItemPath);
+            }
+        }
+
+        await rmdir(oldPath);
+    } catch (err) {
     }
 }
