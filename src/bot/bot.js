@@ -74,9 +74,15 @@ module.exports = class Bot {
         })
     }
 
-    async stop() {
-        this.status = false;
-        this.bot.postMessage({ type: BotCommands.Stop });
+    stop() {
+        return new Promise((res, rej) => {
+            this.bot.on("message", (data) => {
+                if (data.type != BotCommands.Stop) return;
+                this.status = false;
+                res();
+            });
+            this.bot.postMessage({ type: BotCommands.Stop });
+        });
     }
 
     getConsole() {
@@ -86,7 +92,7 @@ module.exports = class Bot {
                 resolve(data.logs);
             });
             this.bot.postMessage({ type: BotCommands.ViewConsole });
-        })
+        });
     }
 
     async logOut() {

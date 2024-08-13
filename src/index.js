@@ -104,7 +104,7 @@ async function main() {
                     continue;
 
                 case BotOptions.Stop:
-                    bot.stop();
+                    await bot.stop();
                     continue;
 
                 // case BotOptions.Console:
@@ -134,6 +134,10 @@ async function main() {
     }
 
     prompts.outro("Exiting...");
+    let bots = getBots();
+    for (let i = 0; i < bots.length; i++) {
+        if (bots[i].status == true) await bots[i].stop();
+    }
     process.exit();
 }
 

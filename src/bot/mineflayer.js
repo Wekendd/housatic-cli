@@ -114,6 +114,7 @@ function reloadEvents(first) {
             } catch (e) {
                 console.log(e);
             }
+            parentPort.postMessage({ type: BotCommands.Stop });
         } else initBot(false);
     });
     bot.on("error", (err) => {

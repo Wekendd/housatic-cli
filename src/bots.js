@@ -24,7 +24,14 @@ async function refreshBots() {
         }
     }
     if (botdirs.length > bots.length) {
-        bots = bots.filter(n => botdirs.includes(n.path));
+        bots = bots.filter((n) => {
+            if (botdirs.includes(n.path)) {
+                return true;
+            } else {
+                if (n.status == true) n.stop();
+                return false;
+            }
+        });
     }
 }
 
