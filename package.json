@@ -5,9 +5,16 @@
   "bin": "./src/index.js",
   "pkg": {
     "scripts": "src/**/*.js",
-    "assets": ["src/**/*.js"],
+    "assets": [
+      "src/**/*.js"
+    ],
     "outputPath": "../",
-    "targets": [ "latest-linux-arm64", "latest-win", "latest-macos", "latest-linux" ]
+    "targets": [
+      "latest-linux-arm64",
+      "latest-win",
+      "latest-macos",
+      "latest-linux"
+    ]
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -21,6 +28,7 @@
     "@clack/prompts": "^0.7.0",
     "fs": "^0.0.1-security",
     "mineflayer": "^4.20.1",
+    "tailing-stream": "^0.2.0",
     "uri-js": "^4.2.2"
   }
 }

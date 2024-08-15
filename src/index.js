@@ -1,163 +1,212 @@
-const prompts = require('@clack/prompts');
-const { refreshBots, getBotDirs, getBots } = require('./bots');
-const { rmdir, writeFile, mkdir } = require('node:fs/promises');
-const { existsSync } = require('node:fs');
-const { MainOptions, BotOptions } = require('./enums');
-const platformPath = require('./path');
+const prompts = require("@clack/prompts");
+const TailingStream = require("tailing-stream");
+const path = require("path");
+const { refreshBots, getBotDirs, getBots } = require("./bots");
+const { rmdir, writeFile, mkdir } = require("node:fs/promises");
+const { existsSync } = require("node:fs");
+const { MainOptions, BotOptions } = require("./enums");
+const platformPath = require("./path");
 
 async function main() {
-    prompts.intro(`Housatic`);
-    await refreshBots();
-    while (true) {
-        try {
-            const option = await prompts.select({
-                message: "Control Panel",
-                options: [
-                    { value: MainOptions.Control, label: "Control a bot" },
-                    { value: MainOptions.Create, label: "Create a bot" },
-                    { value: MainOptions.Delete, label: "Delete a bot" },
-                    { value: MainOptions.Exit, label: "Exit the program" }
-                ]
-            });
+	prompts.intro(`Housatic`);
+	await refreshBots();
+	while (true) {
+		try {
+			const option = await prompts.select({
+				message: "Control Panel",
+				options: [
+					{ value: MainOptions.Control, label: "Control a bot" },
+					{ value: MainOptions.Create, label: "Create a bot" },
+					{ value: MainOptions.Delete, label: "Delete a bot" },
+					{ value: MainOptions.Exit, label: "Exit the program" },
+				],
+			});
 
-            if (option == MainOptions.Exit) break;
+			if (option == MainOptions.Exit) break;
 
-            let botdir;
-            switch (option) {
-                case MainOptions.Control:
-                case MainOptions.Delete:
-                    await refreshBots();
-                    var botoptions = getBotDirs().map((botname, index) => { return { value: index, label: botname } });
-                    botoptions.push({ value: -1, label: "Cancel" })
-                    botdir = await prompts.select({
-                        message: "Select a bot",
-                        options: botoptions
-                    });
-                    break;
-                case MainOptions.Create:
-                    // Create bot menu
-                    let botName = await prompts.text({
-                        message: "Bot name"
-                    });
-                    let houseOwner = await prompts.text({
-                        message: "House owner"
-                    });
-                    let houseSlot = await prompts.text({
-                        message: "House slot"
-                    });
-                    let autojoin = await prompts.confirm({
-                        message: "Do you want autojoin enabled?"
-                    });
+			let botdir;
+			switch (option) {
+				case MainOptions.Control:
+				case MainOptions.Delete:
+					await refreshBots();
+					var botoptions = getBotDirs().map((botname, index) => {
+						return { value: index, label: botname };
+					});
+					botoptions.push({ value: -1, label: "Cancel" });
+					botdir = await prompts.select({
+						message: "Select a bot",
+						options: botoptions,
+					});
+					break;
+				case MainOptions.Create:
+					// Create bot menu
+					let botName = await prompts.text({
+						message: "Bot name",
+					});
+					let houseOwner = await prompts.text({
+						message: "House owner",
+					});
+					let houseSlot = await prompts.text({
+						message: "House slot",
+					});
+					let autojoin = await prompts.confirm({
+						message: "Do you want autojoin enabled?",
+					});
 
-                    let spinner = prompts.spinner();
-                    spinner.start();
-                    await mkdir(`${platformPath}/bots/${botName}/`);
-                    await writeFile(`${platformPath}/bots/${botName}/bot.json`, JSON.stringify({ house: { owner: houseOwner, house_slot: houseSlot, autojoin: autojoin } }));
-                    await writeFile(`${platformPath}/bots/${botName}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
-                    await mkdir(`${platformPath}/bots/${botName}/logs/`);
-                    await refreshBots();
-                    spinner.stop();
-                    break;
-            }
+					let spinner = prompts.spinner();
+					spinner.start();
+					await mkdir(`${platformPath}/bots/${botName}/`);
+					await writeFile(
+						`${platformPath}/bots/${botName}/bot.json`,
+						JSON.stringify({
+							house: { owner: houseOwner, house_slot: houseSlot, autojoin: autojoin },
+						})
+					);
+					await writeFile(
+						`${platformPath}/bots/${botName}/events.json`,
+						JSON.stringify([
+							{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] },
+						])
+					);
+					await mkdir(`${platformPath}/bots/${botName}/logs/`);
+					await refreshBots();
+					spinner.stop();
+					break;
+			}
 
-            if (botdir === -1 || MainOptions.Create == option) continue;
+			if (botdir === -1 || MainOptions.Create == option) continue;
 
-            if (option == MainOptions.Delete) {
-                await rmdir(`${platformPath}/bots/${getBotDirs()[botdir]}`, { recursive: true });
-                await refreshBots();
-                continue;
-            }
+			if (option == MainOptions.Delete) {
+				await rmdir(`${platformPath}/bots/${getBotDirs()[botdir]}`, { recursive: true });
+				await refreshBots();
+				continue;
+			}
 
-            /*
+			/*
                 CONTROL
             */
 
-            let bot = getBots()[botdir]; // Getting the bot instance
+			let bot = getBots()[botdir]; // Getting the bot instance
 
-            // Panel
-            let controlling = true;
-            while (controlling) {
-                let paneloptions = [
-                    { value: BotOptions.Console, label: "View Console" },
-                    { value: BotOptions.Rename, label: "Rename bot" },
-                    { value: BotOptions.Done, label: "Done (return to main menu)" }
-                ];
-                if (bot.status == true) {
-                    paneloptions.unshift({ value: BotOptions.Stop, label: "Stop bot" });
-                    paneloptions.unshift({ value: BotOptions.Refresh, label: "Refresh bot" });
-                } else {
-                    paneloptions.unshift({ value: BotOptions.LogOut, label: "Log Out" });
-                    paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" });
-                }
+			// Panel
+			let controlling = true;
+			while (controlling) {
+				let paneloptions = [
+					{ value: BotOptions.Console, label: "View Console" },
+					{ value: BotOptions.Rename, label: "Rename bot" },
+					{ value: BotOptions.Done, label: "Done (return to main menu)" },
+				];
+				if (bot.status == true) {
+					paneloptions.unshift({ value: BotOptions.Stop, label: "Stop bot" });
+					paneloptions.unshift({ value: BotOptions.Refresh, label: "Refresh bot" });
+				} else {
+					paneloptions.unshift({ value: BotOptions.LogOut, label: "Log Out" });
+					paneloptions.unshift({ value: BotOptions.Start, label: "Start bot" });
+				}
 
-                const control = await prompts.select({
-                    message: "What do you want to do?",
-                    options: paneloptions
-                });
+				const control = await prompts.select({
+					message: "What do you want to do?",
+					options: paneloptions,
+				});
 
-                switch (control) {
-                    case BotOptions.Done:
-                        controlling = false;
-                        continue;
+				switch (control) {
+					case BotOptions.Done:
+						controlling = false;
+						continue;
 
-                    case BotOptions.Start:
-                        await bot.start();
-                        continue;
+					case BotOptions.Start:
+						await bot.start();
+						continue;
 
-                    case BotOptions.Stop:
-                        await bot.stop();
-                        continue;
+					case BotOptions.Stop:
+						await bot.stop();
+						continue;
 
-                    // case BotOptions.Console:
-                    //     bot.getConsole().then((logs) => {
-                    //         prompts.log.message(logs.join("\n"));
-                    //     });
-                    //     continue;
+					case BotOptions.Console:
+						console.log("\x1Bc"); // Clear console
+						console.log('\x1b[32m%s\x1b[0m', `Press "q" to exit the console view.`);
 
-                    case BotOptions.LogOut:
-                        var spinner = prompts.spinner();
-                        spinner.start();
-                        await bot.logOut();
-                        spinner.stop();
-                        continue;
+						const logFilePath = path.join(
+							platformPath,
+							"bots",
+							getBotDirs()[botdir],
+							"logs",
+							"latest.log"
+						);
 
-                    case BotOptions.Refresh:
-                        var spinner = prompts.spinner();
-                        spinner.start();
-                        await bot.refresh();
-                        spinner.stop();
-                        continue;
+						const stream = TailingStream.createReadStream(logFilePath, { timeout: 0 });
 
-                    case BotOptions.Rename:
-                        let newName = await prompts.text({
-                            message: "What do you want to rename it to?"
-                        });
-                        if (existsSync(`${platformPath}/bots/${newName}`)) {
-                            prompts.log.error("A bot is already named that!");
-                        } else {
-                            try {
-                                var spinner = prompts.spinner();
-                                spinner.start();
-                                await bot.rename(newName);
-                                spinner.stop();
-                            } catch (e) {
-                                prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
-                            }
-                        }
-                        break;
-                    default:
-                        prompts.log.message("No functionality here yet lol");
-                }
-            }
-        } catch (e) { console.log(e) }
-    }
+						stream.on("data", (buffer) => {
+                            process.stdout.write(buffer.toString().trimEnd());
+						});
 
-    prompts.outro("Exiting...");
-    let bots = getBots();
-    for (let i = 0; i < bots.length; i++) {
-        if (bots[i].status == true) await bots[i].stop();
-    }
-    process.exit();
+						// Prevent input echo & handle exit keys
+						process.stdin.setRawMode(true);
+						process.stdin.resume();
+						process.stdin.setEncoding("utf-8");
+
+						process.stdin.on("data", function (key) {
+							if (key === "\u0003" || key === "q") {
+								cleanup();
+							}
+						});
+
+						const cleanup = () => {
+							stream.destroy();
+							process.stdin.setRawMode(false);
+							process.stdin.removeAllListeners("data");
+							console.log("\x1Bc"); // Clear console
+						};
+
+						await new Promise((resolve) => stream.on("close", resolve));
+						continue;
+
+					case BotOptions.LogOut:
+						var spinner = prompts.spinner();
+						spinner.start();
+						await bot.logOut();
+						spinner.stop();
+						continue;
+
+					case BotOptions.Refresh:
+						var spinner = prompts.spinner();
+						spinner.start();
+						await bot.refresh();
+						spinner.stop();
+						continue;
+
+					case BotOptions.Rename:
+						let newName = await prompts.text({
+							message: "What do you want to rename it to?",
+						});
+						if (existsSync(`${platformPath}/bots/${newName}`)) {
+							prompts.log.error("A bot is already named that!");
+						} else {
+							try {
+								var spinner = prompts.spinner();
+								spinner.start();
+								await bot.rename(newName);
+								spinner.stop();
+							} catch (e) {
+								prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
+							}
+						}
+						break;
+					default:
+						prompts.log.message("No functionality here yet lol");
+				}
+			}
+		} catch (e) {
+			console.log(e);
+		}
+	}
+
+	prompts.outro("Exiting...");
+	let bots = getBots();
+	for (let i = 0; i < bots.length; i++) {
+		if (bots[i].status == true) await bots[i].stop();
+	}
+	process.exit();
 }
 
 main();
