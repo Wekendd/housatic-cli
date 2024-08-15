@@ -2,7 +2,7 @@ const prompts = require("@clack/prompts");
 const TailingStream = require("tailing-stream");
 const path = require("path");
 const { refreshBots, getBotDirs, getBots } = require("./bots");
-const { rmdir, writeFile, mkdir } = require("node:fs/promises");
+const { rm, writeFile, mkdir } = require("node:fs/promises");
 const { existsSync } = require("node:fs");
 const { MainOptions, BotOptions } = require("./enums");
 const platformPath = require("./path");
@@ -13,12 +13,12 @@ async function main() {
 	while (true) {
 		try {
 			const option = await prompts.select({
-				message: "Control Panel",
+				message: "Main Menu",
 				options: [
 					{ value: MainOptions.Control, label: "Control a bot" },
 					{ value: MainOptions.Create, label: "Create a bot" },
 					{ value: MainOptions.Delete, label: "Delete a bot" },
-					{ value: MainOptions.Exit, label: "Exit the program" },
+					{ value: MainOptions.Exit, label: "Exit the program", hint: "kills active bots!" },
 				],
 			});
 
@@ -41,20 +41,20 @@ async function main() {
 				case MainOptions.Create:
 					// Create bot menu
 					let botName = await prompts.text({
-						message: "Bot name",
+						message: "Name: What should we call your new bot?",
 					});
+                    let autojoin = await prompts.confirm({
+                        message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?",
+                    });
 					let houseOwner = await prompts.text({
-						message: "House owner",
+						message: "House Owner: Who owns the house you want the bot to join?",
 					});
 					let houseSlot = await prompts.text({
-						message: "House slot",
-					});
-					let autojoin = await prompts.confirm({
-						message: "Do you want autojoin enabled?",
+						message: "House Slot: When /visiting the house owner, where is the target house in the GUI? Enter a number.",
 					});
 
 					let spinner = prompts.spinner();
-					spinner.start();
+					spinner.start("Creating new bot...");
 					await mkdir(`${platformPath}/bots/${botName}/`);
 					await writeFile(
 						`${platformPath}/bots/${botName}/bot.json`,
@@ -70,14 +70,14 @@ async function main() {
 					);
 					await mkdir(`${platformPath}/bots/${botName}/logs/`);
 					await refreshBots();
-					spinner.stop();
+					spinner.stop("New bot created");
 					break;
 			}
 
 			if (botdir === -1 || MainOptions.Create == option) continue;
 
 			if (option == MainOptions.Delete) {
-				await rmdir(`${platformPath}/bots/${getBotDirs()[botdir]}`, { recursive: true });
+				await rm(`${platformPath}/bots/${getBotDirs()[botdir]}`, { recursive: true });
 				await refreshBots();
 				continue;
 			}
@@ -105,7 +105,7 @@ async function main() {
 				}
 
 				const control = await prompts.select({
-					message: "What do you want to do?",
+					message: "Bot Control Panel",
 					options: paneloptions,
 				});
 
@@ -163,16 +163,9 @@ async function main() {
 
 					case BotOptions.LogOut:
 						var spinner = prompts.spinner();
-						spinner.start();
+						spinner.start("Logging out...");
 						await bot.logOut();
-						spinner.stop();
-						continue;
-
-					case BotOptions.Refresh:
-						var spinner = prompts.spinner();
-						spinner.start();
-						await bot.refresh();
-						spinner.stop();
+						spinner.stop("Logged out");
 						continue;
 
 					case BotOptions.Rename:
@@ -184,9 +177,9 @@ async function main() {
 						} else {
 							try {
 								var spinner = prompts.spinner();
-								spinner.start();
+								spinner.start("Renaming bot...");
 								await bot.rename(newName);
-								spinner.stop();
+								spinner.stop("Bot renamed");
 							} catch (e) {
 								prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
 							}
