@@ -172,6 +172,13 @@ async function main() {
 						let newName = await prompts.text({
 							message: "What do you want to rename it to?",
 						});
+
+						// Name validation
+						if (newName.match(/[/*"\\<>:|?]|(?:[ .]$)/)) {
+							prompts.log.error("Invalid name.");
+							break;
+						}
+
 						if (existsSync(`${platformPath}/bots/${newName}`)) {
 							prompts.log.error("A bot is already named that!");
 						} else {
@@ -181,7 +188,7 @@ async function main() {
 								await bot.rename(newName);
 								spinner.stop("Bot renamed");
 							} catch (e) {
-								prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
+								prompts.log.error("Something went wrong.");
 							}
 						}
 						break;
