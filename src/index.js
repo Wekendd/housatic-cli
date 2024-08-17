@@ -21,6 +21,10 @@ async function main() {
 					{ value: MainOptions.Exit, label: "Exit the program", hint: "kills active bots!" },
 				],
 			});
+			if (prompts.isCancel(option)) {
+				prompts.cancel("Exiting...");
+				process.exit(0);
+			}
 
 			if (option == MainOptions.Exit) break;
 
@@ -40,35 +44,42 @@ async function main() {
 					break;
 				case MainOptions.Create:
 					// Create bot menu
-					let botName = await prompts.text({
+					const name = await prompts.text({
 						message: "Name: What should we call your new bot?",
+						validate: (value) => {
+							if (!value) return "Please enter a name.";
+							if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
+						},
 					});
-                    let autojoin = await prompts.confirm({
-                        message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?",
-                    });
-					let houseOwner = await prompts.text({
+					const autojoin = await prompts.confirm({ message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?" });
+					const owner = await prompts.text({
 						message: "House Owner: Who owns the house you want the bot to join?",
+						validate: (value) => {
+							if (value.length < 3 || value.length > 16 || !/^\w+$/i.test(value)) return "Please enter a valid username.";
+						},
 					});
-					let houseSlot = await prompts.text({
+					const slot = prompts.text({
 						message: "House Slot: When /visiting the house owner, where is the target house in the GUI? Enter a number.",
+						validate: (value) => {
+							if (!/^\d+$/.test(value)) return "Please enter a number.";
+						},
 					});
 
 					let spinner = prompts.spinner();
 					spinner.start("Creating new bot...");
-					await mkdir(`${platformPath}/bots/${botName}/`);
+					await mkdir(`${platformPath}/bots/${name}/`);
 					await writeFile(
-						`${platformPath}/bots/${botName}/bot.json`,
+						`${platformPath}/bots/${name}/bot.json`,
 						JSON.stringify({
-							house: { owner: houseOwner, house_slot: houseSlot, autojoin: autojoin },
+							house: {
+								owner: owner,
+								house_slot: slot,
+								autojoin: autojoin,
+							},
 						})
 					);
-					await writeFile(
-						`${platformPath}/bots/${botName}/events.json`,
-						JSON.stringify([
-							{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] },
-						])
-					);
-					await mkdir(`${platformPath}/bots/${botName}/logs/`);
+					await writeFile(`${platformPath}/bots/${name}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
+					await mkdir(`${platformPath}/bots/${name}/logs/`);
 					await refreshBots();
 					spinner.stop("New bot created");
 					break;
@@ -124,20 +135,14 @@ async function main() {
 
 					case BotOptions.Console:
 						console.log("\x1Bc"); // Clear console
-						console.log('\x1b[32m%s\x1b[0m', `Press "q" to exit the console view.`);
+						console.log("\x1b[32m%s\x1b[0m", `Press "q" to exit the console view.`);
 
-						const logFilePath = path.join(
-							platformPath,
-							"bots",
-							getBotDirs()[botdir],
-							"logs",
-							"latest.log"
-						);
+						const logFilePath = path.join(platformPath, "bots", getBotDirs()[botdir], "logs", "latest.log");
 
 						const stream = TailingStream.createReadStream(logFilePath, { timeout: 0 });
 
 						stream.on("data", (buffer) => {
-                            process.stdout.write(buffer.toString().trimEnd());
+							process.stdout.write(buffer.toString().trimEnd());
 						});
 
 						// Prevent input echo & handle exit keys
@@ -171,18 +176,18 @@ async function main() {
 					case BotOptions.Rename:
 						let newName = await prompts.text({
 							message: "What do you want to rename it to?",
+							validate: (value) => {
+								if (!value) return "Please enter a name.";
+								if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
+							},
 						});
-						if (existsSync(`${platformPath}/bots/${newName}`)) {
-							prompts.log.error("A bot is already named that!");
-						} else {
-							try {
-								var spinner = prompts.spinner();
-								spinner.start("Renaming bot...");
-								await bot.rename(newName);
-								spinner.stop("Bot renamed");
-							} catch (e) {
-								prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
-							}
+						try {
+							var spinner = prompts.spinner();
+							spinner.start("Renaming bot...");
+							await bot.rename(newName);
+							spinner.stop("Bot renamed");
+						} catch (e) {
+							prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
 						}
 						break;
 					default:
