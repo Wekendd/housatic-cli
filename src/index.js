@@ -181,13 +181,24 @@ async function main() {
 								if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
 							},
 						});
-						try {
-							var spinner = prompts.spinner();
-							spinner.start("Renaming bot...");
-							await bot.rename(newName);
-							spinner.stop("Bot renamed");
-						} catch (e) {
-							prompts.log.error("Issue renaming bot. Are you sure the name is valid?");
+
+						// Name validation
+						if (newName.match(/[/*"\\<>:|?]|(?:[ .]$)/)) {
+							prompts.log.error("Invalid name.");
+							break;
+						}
+
+						if (existsSync(`${platformPath}/bots/${newName}`)) {
+							prompts.log.error("A bot is already named that!");
+						} else {
+							try {
+								var spinner = prompts.spinner();
+								spinner.start("Renaming bot...");
+								await bot.rename(newName);
+								spinner.stop("Bot renamed");
+							} catch (e) {
+								prompts.log.error("Something went wrong.");
+							}
 						}
 						break;
 					default:
