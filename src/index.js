@@ -49,6 +49,7 @@ async function main() {
 						validate: (value) => {
 							if (!value) return "Please enter a name.";
 							if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
+							if (!isValidDirectoryName(value)) return "Invalid bot name!";
 						},
 					});
 					const autojoin = await prompts.confirm({ message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?" });
@@ -179,6 +180,7 @@ async function main() {
 							validate: (value) => {
 								if (!value) return "Please enter a name.";
 								if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
+								if (!isValidDirectoryName(value)) return "Invalid bot name!";
 							},
 						});
 
@@ -188,17 +190,13 @@ async function main() {
 							break;
 						}
 
-						if (existsSync(`${platformPath}/bots/${newName}`)) {
-							prompts.log.error("A bot is already named that!");
-						} else {
-							try {
-								var spinner = prompts.spinner();
-								spinner.start("Renaming bot...");
-								await bot.rename(newName);
-								spinner.stop("Bot renamed");
-							} catch (e) {
-								prompts.log.error("Something went wrong.");
-							}
+						try {
+							var spinner = prompts.spinner();
+							spinner.start("Renaming bot...");
+							await bot.rename(newName);
+							spinner.stop("Bot renamed");
+						} catch (e) {
+							prompts.log.error("Something went wrong.");
 						}
 						break;
 					default:
@@ -219,3 +217,20 @@ async function main() {
 }
 
 main();
+
+function isValidDirectoryName(name) {
+	// Invalid characters for Windows, macOS, and Linux
+	const invalidChars = /[<>:"/\\|?*\x00-\x1F]/g;
+
+	// Check if the name contains invalid characters
+	if (invalidChars.test(name)) return false;
+
+	// Check for reserved folder names (windows-specific)
+	const reservedNames = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+	if (reservedNames.includes(name.toUpperCase())) return false;
+
+	// Check if the name ends with a space or a period (Windows-specific)
+	if (/[. ]$/.test(name)) return false;
+
+	return true;
+}
