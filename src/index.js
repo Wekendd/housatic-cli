@@ -62,6 +62,7 @@ async function main() {
 						continue mainmenu;
 					}
 
+					await getBots()[botdir].logOut();
 					await delete_bot(botindex);
 					continue mainmenu;
 
@@ -176,6 +177,13 @@ async function control_bot(botindex) {
 		}
 
 		switch (action) {
+			case BotOptions.Refresh:
+				await bot.refresh();
+				break controlmenu;
+
+			case BotOptions.Done:
+				break controlmenu;
+
 			case BotOptions.Start:
 				await bot.start();
 				continue controlmenu;
@@ -292,4 +300,13 @@ function valid_dir(name) {
 	if (/[. ]$/.test(name)) return false;
 
 	return true;
+}
+
+// Create hash of named login tokens
+function createHash(input) {
+	return crypto
+		.createHash("sha1")
+		.update(input ?? "", "binary")
+		.digest("hex")
+		.substr(0, 6);
 }
