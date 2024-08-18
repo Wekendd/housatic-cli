@@ -61,8 +61,8 @@ function reloadEvents(first) {
                 if (event.criteria.startsWith("/") && event.criteria.endsWith("/")) matcher = new RegExp(event.criteria.substring(1, event.criteria.length - 1));
                     else { // using CT's formatting
                         let modifiedCriteria = event.criteria.replace(/([\\\(\)\[\]\{\}\?\*\+\^\$\-])/g, "\\$1"); // sanitize it so no stray tokens mess up the regex constructor
-                        modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
-                        modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
+                        modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+?)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
+                        modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+?\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
                         matcher = new RegExp("^" + modifiedCriteria);
                     }
                 bot.on("messagestr", (message, username) => {

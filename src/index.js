@@ -147,6 +147,10 @@ async function control_bot(botdir) {
 		});
 
 		switch (action) {
+			case BotOptions.Refresh:
+				bot.refresh();
+				break controlmenu;
+
 			case BotOptions.Done:
 				break controlmenu;
 
