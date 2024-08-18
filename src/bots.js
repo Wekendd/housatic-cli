@@ -7,6 +7,7 @@ let bots = [];
 
 async function refreshBots() {
 	botdirs = await readdir(`${platformPath}/bots/`);
+
 	for (let i = 0; i < botdirs.length; i++) {
 		try {
 			let configraw = await readFile(`${platformPath}/bots/${botdirs[i]}/bot.json`, "utf-8");
@@ -17,12 +18,14 @@ async function refreshBots() {
 				i--;
 				continue;
 			}
-			if (!bots.some((n) => n.path == botdirs[i])) bots.push(new Bot(botdirs[i], config));
-		} catch (e) {}
+			if (!bots.some((n) => n.name == botdirs[i])) bots.push(new Bot(botdirs[i], config));
+		} catch (e) {
+			log.error("Error:", e.message);
+		}
 	}
-	if (botdirs.length > bots.length) {
+	if (bots.length != botdirs.length) {
 		bots = bots.filter((n) => {
-			if (botdirs.includes(n.path)) {
+			if (botdirs.includes(n.name)) {
 				return true;
 			} else {
 				if (n.status == true) n.stop();
@@ -32,15 +35,11 @@ async function refreshBots() {
 	}
 }
 
-function getBotDirs() {
-	return botdirs;
-}
 function getBots() {
 	return bots;
 }
 
 module.exports = {
-	getBotDirs,
 	getBots,
 	refreshBots,
 };

@@ -15,14 +15,16 @@ function createHash(input) {
 
 module.exports = class Bot {
 	options;
+	name;
 	path;
 	status;
 	bot;
 	config;
 	events;
 
-	constructor(path, config) {
-		this.path = path;
+	constructor(name, config) {
+		this.name = name;
+		this.path = `${platformPath}/bots/${name}`;
 		this.refresh();
 		this.status = false;
 		try {
@@ -35,7 +37,7 @@ module.exports = class Bot {
 			host: "hypixel.net",
 			auth: "microsoft",
 			version: "1.8.9",
-			username: this.path,
+			username: this.name,
 			profilesFolder: `${platformPath}/profiles`,
 		};
 	}
@@ -112,33 +114,18 @@ module.exports = class Bot {
 	async logOut() {
 		let hash = createHash(this.path);
 		let caches = await readdir(`${platformPath}/profiles/`);
-		if (caches.includes(`${hash}_live-cache.json`))
-			await unlink(`${platformPath}/profiles/${hash}_live-cache.json`);
-		if (caches.includes(`${hash}_mca-cache.json`))
-			await unlink(`${platformPath}/profiles/${hash}_mca-cache.json`);
-		if (caches.includes(`${hash}_xbl-cache.json`))
-			await unlink(`${platformPath}/profiles/${hash}_xbl-cache.json`);
+		if (caches.includes(`${hash}_live-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_live-cache.json`);
+		if (caches.includes(`${hash}_mca-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_mca-cache.json`);
+		if (caches.includes(`${hash}_xbl-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_xbl-cache.json`);
 	}
 
 	async rename(newName) {
 		let hash = createHash(this.path);
 		let newHash = createHash(newName);
 		let caches = await readdir(`${platformPath}/profiles/`);
-		if (caches.includes(`${hash}_live-cache.json`))
-			await rename(
-				`${platformPath}/profiles/${hash}_live-cache.json`,
-				`${platformPath}/profiles/${newHash}_live-cache.json`
-			);
-		if (caches.includes(`${hash}_mca-cache.json`))
-			await rename(
-				`${platformPath}/profiles/${hash}_mca-cache.json`,
-				`${platformPath}/profiles/${newHash}_mca-cache.json`
-			);
-		if (caches.includes(`${hash}_xbl-cache.json`))
-			await rename(
-				`${platformPath}/profiles/${hash}_xbl-cache.json`,
-				`${platformPath}/profiles/${newHash}_xbl-cache.json`
-			);
+		if (caches.includes(`${hash}_live-cache.json`)) await rename(`${platformPath}/profiles/${hash}_live-cache.json`, `${platformPath}/profiles/${newHash}_live-cache.json`);
+		if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);
+		if (caches.includes(`${hash}_xbl-cache.json`)) await rename(`${platformPath}/profiles/${hash}_xbl-cache.json`, `${platformPath}/profiles/${newHash}_xbl-cache.json`);
 		this.bot.postMessage({ type: BotCommands.Rename, path: newName });
 		await renameDir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
 		this.path = newName;
