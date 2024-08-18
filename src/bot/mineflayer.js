@@ -6,6 +6,8 @@ const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
 const platformPath = require('../path');
 
+const s = prompts.spinner();
+
 let bot;
 let options;
 let chatlog = [];
@@ -36,7 +38,7 @@ function reloadEvents(first) {
     if (!first) bot.removeAllListeners();
 
     if (first) bot.once("login", () => {
-        spinner.stop();
+        s.stop("Bot started");
         setTimeout(() => parentPort.postMessage({ type: BotCommands.Started }), 100); // slight delay because apparently the spinner doesn't instantly stop or smth stupid
     });
 
@@ -165,8 +167,6 @@ async function executeActions(actions, args) {
     }
 }
 
-let spinner = prompts.spinner();
-
 parentPort.on('message', (msg) => {
     switch (msg.type) {
         case BotCommands.Start:
@@ -174,14 +174,14 @@ parentPort.on('message', (msg) => {
             chatlog = [];
             options = msg.options;
             options.onMsaCode = (data) => {
-                spinner.stop();
+                s.stop("Log in to a Minecraft account:");
                 prompts.log.message(`Sign in at http://microsoft.com/link?otc=${data.user_code}`);
-                spinner.start();
+                s.start();
             }
             config = msg.config;
             events = msg.events;
             path = msg.path;
-            spinner.start();
+            s.start("Starting bot...");
             initBot(true);
             break;
         case BotCommands.Stop:
