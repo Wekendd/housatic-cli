@@ -52,6 +52,7 @@ async function main() {
 						case MainOptions.Control:
 							await control_bot(botdir);
 						case MainOptions.Delete:
+							await getBots()[botdir].logOut();
 							await delete_bot(botdir);
 					}
 
@@ -102,8 +103,8 @@ async function main() {
 			}
 
 			/*
-                CONTROL
-            */
+				CONTROL
+			*/
 		} catch (e) {
 			console.log(e);
 		}
@@ -251,4 +252,13 @@ function valid_dir(name) {
 	if (/[. ]$/.test(name)) return false;
 
 	return true;
+}
+
+// Create hash of named login tokens
+function createHash(input) {
+	return crypto
+		.createHash("sha1")
+		.update(input ?? "", "binary")
+		.digest("hex")
+		.substr(0, 6);
 }
