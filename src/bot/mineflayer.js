@@ -4,7 +4,6 @@ const mineflayer = require("mineflayer");
 const prompts = require("@clack/prompts");
 const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
-const platformPath = require("../path");
 
 const s = prompts.spinner();
 
@@ -106,7 +105,7 @@ function reloadEvents(first) {
 	bot.on("messagestr", (message, username) => {
 		if (username !== "chat") return;
 		chatlog.push(message);
-		writeFile(`${platformPath}/bots/${path}/logs/latest.log`, chatlog.join("\n"));
+		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 	});
 	bot.on("end", async (reason) => {
 		if (reason == "Player Quit") {
@@ -114,7 +113,7 @@ function reloadEvents(first) {
 			try {
 				let file = zlib.gzipSync(chatlog.join("\n"));
 				let date = new Date();
-				await writeFile(`${platformPath}/bots/${path}/logs/${date.toISOString().replaceAll(":", "-").replaceAll(".", "-")}.log.gz`, file);
+				await writeFile(`${path}/logs/${date.toISOString().replaceAll(":", "-").replaceAll(".", "-")}.log.gz`, file);
 			} catch (e) {
 				console.log(e);
 			}
@@ -160,7 +159,7 @@ async function executeActions(actions, args) {
 					action.message = action.message.replaceAll(`\${${key}}`, args[key]);
 				}
 				chatlog.push(action.message);
-				writeFile(`${platformPath}/bots/${path}/logs/latest.log`, chatlog.join("\n"));
+				writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 				break;
 			case "mineflayer_method":
 				new Function(["bot"], "bot." + action.method)(bot);
@@ -176,14 +175,15 @@ parentPort.on("message", (msg) => {
 			chatlog = [];
 			options = msg.options;
 			options.onMsaCode = (data) => {
-				s.stop("Log in to a Minecraft account:");
-				prompts.log.message(`Sign in at http://microsoft.com/link?otc=${data.user_code}`);
-				s.start();
+				s.stop();
+				console.log("\x1b[F\x1b[F\x1b[F");
+				prompts.note(`Sign in at http://microsoft.com/link?otc=${data.user_code}`, "Log in to a Minecraft account:");
+				s.start("Waiting");
 			};
 			config = msg.config;
 			events = msg.events;
 			path = msg.path;
-			s.start("Starting bot...");
+			s.start("Starting bot");
 			initBot(true);
 			break;
 		case BotCommands.Stop:
@@ -206,7 +206,7 @@ parentPort.on("message", (msg) => {
 		case BotCommands.Rename:
 			path = msg.path;
 			try {
-				options.username = msg.path;
+				options.username = msg.name;
 			} catch (e) {}
 			break;
 		default:

@@ -1,7 +1,7 @@
 const { intro, outro, select, confirm, isCancel, cancel, text, spinner, log } = require("@clack/prompts");
 const TailingStream = require("tailing-stream");
 const path = require("path");
-const { refreshBots, getBots } = require("./bots");
+const { refresh_bots, getBots } = require("./bots");
 const { rm, writeFile, mkdir } = require("node:fs/promises");
 const { existsSync } = require("node:fs");
 const { MainOptions, BotOptions } = require("./enums");
@@ -11,7 +11,7 @@ const s = spinner();
 
 async function main() {
 	intro(`Housatic`);
-	await refreshBots();
+	await refresh_bots();
 	mainmenu: while (true) {
 		try {
 			const action = await select({
@@ -25,12 +25,12 @@ async function main() {
 			});
 			if (isCancel(action)) break mainmenu;
 
-			if (action == MainOptions.Exit) break;
+			if (action == MainOptions.Exit) break mainmenu;
 
 			let bot;
 			switch (action) {
 				case MainOptions.Control:
-					await refreshBots();
+					await refresh_bots();
 					var botoptions = getBots().map((bot, index) => {
 						return { value: index, label: bot.name };
 					});
@@ -48,7 +48,7 @@ async function main() {
 					continue mainmenu;
 
 				case MainOptions.Delete:
-					await refreshBots();
+					await refresh_bots();
 					var botoptions = getBots().map((bot, index) => {
 						return { value: index, label: bot.name };
 					});
@@ -62,7 +62,7 @@ async function main() {
 						continue mainmenu;
 					}
 
-					await getBots()[botdir].logOut();
+					await getBots()[botindex].log_out();
 					await delete_bot(botindex);
 					continue mainmenu;
 
@@ -125,20 +125,20 @@ async function main() {
 					);
 					await writeFile(`${platformPath}/bots/${name}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
 					await mkdir(`${platformPath}/bots/${name}/logs/`);
-					await refreshBots();
+					await refresh_bots();
 					s.stop("New bot created!");
 
 					continue mainmenu;
 			}
 		} catch (e) {
-			log.error("Error:", e.message);
+			log.error("Error!", e);
 		}
 	}
 
 	outro("Exiting...");
 	let bots = getBots();
 	for (let i = 0; i < bots.length; i++) {
-		if (bots[i].status == true) await bots[i].stop();
+		if (bots[i].status) await bots[i].stop();
 	}
 	process.exit();
 }
@@ -226,8 +226,8 @@ async function control_bot(botindex) {
 				continue controlmenu;
 
 			case BotOptions.LogOut:
-				s.start("Logging out...");
-				await bot.logOut();
+				s.start("Logging out");
+				await bot.log_out();
 				s.stop("Logged out!");
 				continue controlmenu;
 
@@ -250,7 +250,7 @@ async function control_bot(botindex) {
 					await bot.rename(newName);
 					s.stop("Bot renamed!");
 				} catch (e) {
-					log.error("Error:", e.message);
+					log.error("Error!", e.message);
 					break controlmenu;
 				}
 
@@ -276,7 +276,7 @@ async function delete_bot(botindex) {
 
 	s.start("Deleting bot");
 	await rm(bot.path, { recursive: true });
-	await refreshBots();
+	await refresh_bots();
 	s.stop("Bot deleted!");
 }
 
@@ -300,13 +300,4 @@ function valid_dir(name) {
 	if (/[. ]$/.test(name)) return false;
 
 	return true;
-}
-
-// Create hash of named login tokens
-function createHash(input) {
-	return crypto
-		.createHash("sha1")
-		.update(input ?? "", "binary")
-		.digest("hex")
-		.substr(0, 6);
 }
