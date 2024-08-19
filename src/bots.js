@@ -5,7 +5,7 @@ const platformPath = require("./path");
 let botdirs;
 let bots = [];
 
-async function refreshBots() {
+async function refresh_bots() {
 	botdirs = await readdir(`${platformPath}/bots/`);
 
 	for (let i = 0; i < botdirs.length; i++) {
@@ -20,7 +20,7 @@ async function refreshBots() {
 			}
 			if (!bots.some((n) => n.name == botdirs[i])) bots.push(new Bot(botdirs[i], config));
 		} catch (e) {
-			log.error("Error:", e.message);
+			log.error("Error!", e.message);
 		}
 	}
 	if (bots.length != botdirs.length) {
@@ -41,5 +41,5 @@ function getBots() {
 
 module.exports = {
 	getBots,
-	refreshBots,
+	refresh_bots,
 };

@@ -10,7 +10,7 @@ function createHash(input) {
 		.createHash("sha1")
 		.update(input ?? "", "binary")
 		.digest("hex")
-		.substr(0, 6);
+		.substring(0, 6);
 }
 
 module.exports = class Bot {
@@ -46,10 +46,10 @@ module.exports = class Bot {
 		return new Promise((resolve, reject) => {
 			// this is disgusting never let me code again
 			try {
-				readFile(`${platformPath}/bots/${this.path}/bot.json`, "utf-8").then((configraw) => {
+				readFile(`${this.path}/bot.json`, "utf-8").then((configraw) => {
 					this.config = JSON.parse(configraw);
 					try {
-						readFile(`${platformPath}/bots/${this.path}/events.json`, "utf-8").then((eventsraw) => {
+						readFile(`${this.path}/events.json`, "utf-8").then((eventsraw) => {
 							this.events = JSON.parse(eventsraw);
 							this.bot.postMessage({
 								type: BotCommands.Refresh,
@@ -77,9 +77,9 @@ module.exports = class Bot {
 		return new Promise((resolve, reject) => {
 			this.bot.on("message", (data) => {
 				if (data.type != BotCommands.Started) return;
+				this.status = true;
 				resolve();
 			});
-			this.status = true;
 			this.bot.postMessage({
 				type: BotCommands.Start,
 				options: this.options,
@@ -91,17 +91,17 @@ module.exports = class Bot {
 	}
 
 	stop() {
-		return new Promise((res, rej) => {
+		return new Promise((resolve, reject) => {
 			this.bot.on("message", (data) => {
 				if (data.type != BotCommands.Stop) return;
 				this.status = false;
-				res();
+				resolve();
 			});
 			this.bot.postMessage({ type: BotCommands.Stop });
 		});
 	}
 
-	getConsole() {
+	get_console() {
 		return new Promise((resolve, reject) => {
 			this.bot.on("message", (data) => {
 				if (data.type != BotCommands.ReturnConsole) return;
@@ -111,7 +111,7 @@ module.exports = class Bot {
 		});
 	}
 
-	async logOut() {
+	async log_out() {
 		let hash = createHash(this.path);
 		let caches = await readdir(`${platformPath}/profiles/`);
 		if (caches.includes(`${hash}_live-cache.json`)) await unlink(`${platformPath}/profiles/${hash}_live-cache.json`);
@@ -126,14 +126,14 @@ module.exports = class Bot {
 		if (caches.includes(`${hash}_live-cache.json`)) await rename(`${platformPath}/profiles/${hash}_live-cache.json`, `${platformPath}/profiles/${newHash}_live-cache.json`);
 		if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);
 		if (caches.includes(`${hash}_xbl-cache.json`)) await rename(`${platformPath}/profiles/${hash}_xbl-cache.json`, `${platformPath}/profiles/${newHash}_xbl-cache.json`);
-		this.bot.postMessage({ type: BotCommands.Rename, path: newName });
-		await renameDir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
+		this.bot.postMessage({ type: BotCommands.Rename, name: newName });
+		await rename_dir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
 		this.path = newName;
 		this.options.username = newName;
 	}
 };
 
-async function renameDir(oldPath, newPath) {
+async function rename_dir(oldPath, newPath) {
 	try {
 		// Create the new directory if it doesn't exist
 		await mkdir(newPath, { recursive: true });
@@ -148,7 +148,7 @@ async function renameDir(oldPath, newPath) {
 			let itemStats = await stat(oldItemPath);
 
 			if (itemStats.isDirectory()) {
-				await renameDir(oldItemPath, newItemPath);
+				await rename_dir(oldItemPath, newItemPath);
 			} else {
 				await rename(oldItemPath, newItemPath);
 			}
