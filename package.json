@@ -1,7 +1,7 @@
 {
   "name": "housatic-cli",
   "version": "1.0.0",
-  "main": "./src/index.js",
+  "main": "./src/floorplan/lexer.js",
   "bin": "./src/index.js",
   "pkg": {
     "scripts": "src/**/*.js",
@@ -28,6 +28,7 @@
     "@clack/prompts": "^0.7.0",
     "fs": "^0.0.1-security",
     "mineflayer": "^4.20.1",
+    "moo": "^0.5.2",
     "tailing-stream": "^0.2.0",
     "uri-js": "^4.2.2"
   }
