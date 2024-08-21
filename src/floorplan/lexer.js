@@ -1,43 +1,94 @@
-const fs = require("fs");
 const moo = require("moo");
 
-let lexer = moo.states({
-	main: {
-		WS: /[ \t]+/,
-		NL: { match: /(?:\r\n|\r|\n)/, lineBreaks: true },
-		comment: /(?:\/\/.*?$)|(?:\/\*[\s\S]*?\*\/)/,
+let lexer = moo.compile({
+	ws: /[ \t]+/,
+	nl: { match: /(?:\r\n|\r|\n)/, lineBreaks: true },
 
-		lbrace: { match: "{", push: "main" },
-		rbrace: { match: "}", pop: 1 },
-		rparen: "(",
-		lparen: ")",
+	comma: ",",
+	lparen: "(",
+	rparen: ")",
+	lbrace: "{",
+	rbrace: "}",
 
-		lit_start: { match: '"', push: "literal" },
-		number: /[0-9]+(?:\.[0-9]+)?/,
+	add: "+",
+	sub: "-",
+	mul: "*",
+	div: "/",
+	mod: "%",
 
-		identifier: {
-			match: /[a-zA-Z_][a-zA-Z0-9_]*/,
-			type: moo.keywords({
-				keyword: ["perm", "temp", "on", "matches", "fn", "run", "wait", "log", "return"],
-			}),
-		},
-		operator: ["=", "==", ">", "<", ">=", "<=", "!=", "!", "||", "&&", "%", "%=", "+", "++", "+=", "-", "--", "-=", "*", "*=", "/", "/=", "**", "**="],
+	assignment: "=",
+
+	equ_comp: "==",
+	lth_comp: "<",
+	lte_comp: "<=",
+	gth_comp: ">",
+	gte_comp: ">=",
+
+	comment: {
+		match: /#[^\n]*/,
+		value: (s) => s.substring(1).trimStart(),
 	},
-	literal: {
-		lit_interp: { match: "${", push: "main" },
-		lit_escape: /\\./,
-		lit_end: { match: '"', pop: 1 },
-		lit_const: { match: /(?:[^$"]|\$(?!\{))+/, lineBreaks: true },
+
+	string_literal: {
+		match: /"(?:[^\n\\"]|\\["\\ntbfr])*"/,
+		value: (s) => JSON.parse(s),
+	},
+	number_literal: {
+		match: /[0-9]+(?:\.[0-9]+)?/,
+		value: (s) => Number(s),
+	},
+	identifier: {
+		match: /[a-zA-Z_][a-zA-Z0-9_]*/,
+		type: moo.keywords({
+			perm: "perm",
+			temp: "temp",
+			on: "on",
+			fn: "fn",
+			run: "run",
+			wait: "wait",
+			log: "log",
+			return: "return",
+			true: "true",
+			false: "false",
+		}),
 	},
 });
 
-let sourceCode = fs.readFileSync("./test/test.fp", "utf8");
-lexer.reset(sourceCode);
-
-// const tokens = console.log(Array.from(lexer))
-
-for (let token of lexer) {
-	if (token.type == "NL") console.log("");
-	if (token.type == "WS" || token.type == "NL" || token.type == "comment") continue;
-	console.log(`${token.type}: "${token.value}"`);
+function tokenStart(token) {
+	return {
+		line: token.line,
+		col: token.col - 1,
+	};
 }
+
+function tokenEnd(token) {
+	const lastNewLine = token.text.lastIndexOf("\n");
+	if (lastNewLine !== -1) {
+		throw new Error("Unsupported case: token with line breaks");
+	}
+	return {
+		line: token.line,
+		col: token.col + token.text.length - 1,
+	};
+}
+
+function convertToken(token) {
+	return {
+		type: token.type,
+		value: token.value,
+		start: tokenStart(token),
+		end: tokenEnd(token),
+	};
+}
+
+function convertTokenId(data) {
+	return convertToken(data[0]);
+}
+
+module.exports = {
+	lexer,
+	tokenStart,
+	tokenEnd,
+	convertToken,
+	convertTokenId,
+};
