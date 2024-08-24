@@ -3,7 +3,7 @@
 (function () {
 function id(x) { return x[0]; }
 
-const { lexer, tokenStart, tokenEnd, convertToken, convertTokenId } = require("./lexer.js");
+const { lexer, tokenStart, tokenEnd, convertToken, convertTokenId } = require("../lexer.js");
 
 function toNumber(d) {
     return parseFloat(d[0]);
@@ -31,11 +31,13 @@ var grammar = {
             end: d[10].end
         })
                 },
-    {"name": "event_def", "symbols": [{"literal":"on"}, "_", "identifier", "_", {"literal":"("}, "_", "parameter_list", "_", {"literal":")"}, "_", "code_block"], "postprocess": 
+    {"name": "event_def$ebnf$1", "symbols": ["string_literal"], "postprocess": id},
+    {"name": "event_def$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "event_def", "symbols": [{"literal":"on"}, "_", "identifier", "_", {"literal":"("}, "_", "event_def$ebnf$1", "_", {"literal":")"}, "_", "code_block"], "postprocess": 
         d => ({
             type: "event_def",
             name: d[2],
-            parameters: d[6],
+            criteria: d[6],
             body: d[10],
             start: tokenStart(d[0]),
             end: d[10].end
@@ -57,7 +59,8 @@ var grammar = {
     {"name": "executable_statements", "symbols": ["executable_statement", "_ml", "executable_statements"], "postprocess": d => [d[0], ...d[2]]},
     {"name": "executable_statements", "symbols": ["executable_statement"], "postprocess": d => [d[0]]},
     {"name": "executable_statement", "symbols": ["return_statement"], "postprocess": id},
-    {"name": "executable_statement", "symbols": ["var_assignment"], "postprocess": id},
+    {"name": "executable_statement", "symbols": ["if_statement"]},
+    {"name": "executable_statement", "symbols": ["var_statement"], "postprocess": id},
     {"name": "executable_statement", "symbols": ["line_comment"], "postprocess": id},
     {"name": "return_statement", "symbols": [{"literal":"return"}, "__", "expression"], "postprocess": 
         d => ({
@@ -67,9 +70,17 @@ var grammar = {
             end: d[2].end
         })
                },
-    {"name": "var_assignment", "symbols": ["perm_assignment"]},
-    {"name": "var_assignment", "symbols": ["temp_assignment"]},
-    {"name": "perm_assignment", "symbols": [{"literal":"perm"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
+    {"name": "if_statement$ebnf$1", "symbols": []},
+    {"name": "if_statement$ebnf$1$subexpression$1", "symbols": ["_ml", {"literal":"else"}, "__", {"literal":"if"}, "_", {"literal":"("}, "_", "expression", "_", {"literal":")"}, "_", "code_block"]},
+    {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "if_statement$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "if_statement$ebnf$2$subexpression$1", "symbols": ["_ml", {"literal":"else"}, "_", "code_block"]},
+    {"name": "if_statement$ebnf$2", "symbols": ["if_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "if_statement$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "if_statement", "symbols": [{"literal":"if"}, "_", {"literal":"("}, "_", "expression", "_", {"literal":")"}, "_", "code_block", "if_statement$ebnf$1", "if_statement$ebnf$2"]},
+    {"name": "var_statement", "symbols": ["perm_declaration"]},
+    {"name": "var_statement", "symbols": ["temp_declaration"]},
+    {"name": "var_statement", "symbols": ["var_assignment"]},
+    {"name": "perm_declaration", "symbols": [{"literal":"perm"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
         d => ({
             type: "perm_assignment",
             var_name: d[0],
@@ -78,7 +89,7 @@ var grammar = {
             end: d[4].end
         })
                 },
-    {"name": "temp_assignment", "symbols": [{"literal":"temp"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
+    {"name": "temp_declaration", "symbols": [{"literal":"temp"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
         d => ({
             type: "temp_assignment",
             var_name: d[0],
@@ -87,6 +98,7 @@ var grammar = {
             end: d[4].end
         })
                 },
+    {"name": "var_assignment", "symbols": ["identifier", "_", {"literal":"="}, "_", "expression"]},
     {"name": "expression", "symbols": ["boolean_expression"], "postprocess": id},
     {"name": "boolean_expression", "symbols": ["comparison_expression"], "postprocess": id},
     {"name": "boolean_expression", "symbols": ["comparison_expression", "_", "boolean_operator", "_", "boolean_expression"], "postprocess": 

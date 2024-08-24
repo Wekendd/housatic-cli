@@ -15,15 +15,15 @@ let lexer = moo.compile({
 	mul: "*",
 	div: "/",
 	mod: "%",
+	
+	equ_comp: "==",
+	lte_comp: "<=",
+	gte_comp: ">=",
+	lth_comp: "<",
+	gth_comp: ">",
 
 	assignment: "=",
-
-	equ_comp: "==",
-	lth_comp: "<",
-	lte_comp: "<=",
-	gth_comp: ">",
-	gte_comp: ">=",
-
+	
 	comment: {
 		match: /#[^\n]*/,
 		value: (s) => s.substring(1).trimStart(),
@@ -40,16 +40,18 @@ let lexer = moo.compile({
 	identifier: {
 		match: /[a-zA-Z_][a-zA-Z0-9_]*/,
 		type: moo.keywords({
-			perm: "perm",
-			temp: "temp",
 			on: "on",
 			fn: "fn",
-			run: "run",
-			wait: "wait",
-			log: "log",
+			perm: "perm",
+			temp: "temp",
 			return: "return",
 			true: "true",
 			false: "false",
+
+			command: "command",
+			run: "run",
+			wait: "wait",
+			log: "log",
 		}),
 	},
 });

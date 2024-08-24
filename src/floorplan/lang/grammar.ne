@@ -1,5 +1,5 @@
 @{%
-const { lexer, tokenStart, tokenEnd, convertToken, convertTokenId } = require("./lexer.js");
+const { lexer, tokenStart, tokenEnd, convertToken, convertTokenId } = require("../lexer.js");
 
 function toNumber(d) {
     return parseFloat(d[0]);
@@ -41,12 +41,12 @@ function_def
         %}
 
 event_def
-    -> "on" _ identifier _ "(" _ parameter_list _ ")" _ code_block
+    -> "on" _ identifier _ "(" _ string_literal:? _ ")" _ code_block
         {%
             d => ({
                 type: "event_def",
                 name: d[2],
-                parameters: d[6],
+                criteria: d[6],
                 body: d[10],
                 start: tokenStart(d[0]),
                 end: d[10].end
@@ -81,7 +81,8 @@ executable_statements
 
 executable_statement
    -> return_statement     {% id %}
-   |  var_assignment       {% id %}
+   |  if_statement
+   |  var_statement       {% id %}
    |  line_comment         {% id %}
 
 # --------------------------------------------------- #
@@ -97,13 +98,16 @@ return_statement
            })
        %}
 
-var_assignment
-    -> perm_assignment
-    |  temp_assignment
+if_statement
+    -> "if" _ "(" _ expression _ ")" _ code_block (_ml "else" __ "if" _ "(" _ expression _ ")" _ code_block):* (_ml "else" _ code_block):?
+
+var_statement
+    -> perm_declaration | temp_declaration
+    |  var_assignment
 
 # --------------------------------------------------- #
 
-perm_assignment
+perm_declaration
     -> "perm" _ identifier _ "=" _ expression
         {%
             d => ({
@@ -115,8 +119,8 @@ perm_assignment
             })
         %}
 
-temp_assignment
--> "temp" _ identifier _ "=" _ expression
+temp_declaration
+    -> "temp" _ identifier _ "=" _ expression
         {%
             d => ({
                 type: "temp_assignment",
@@ -126,6 +130,9 @@ temp_assignment
                 end: d[4].end
             })
         %}
+
+var_assignment
+    -> identifier _ "=" _ expression
 
 # --------------------------------------------------- #
 
