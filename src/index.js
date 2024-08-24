@@ -194,14 +194,18 @@ async function control_bot(botindex) {
 
 			case BotOptions.Console:
 				console.log("\x1Bc"); // Clear console
-				console.log("\x1b[32m%s\x1b[0m", `Press "q" to exit the console view.`);
+				console.log("\x1b[32m%s\x1b[0m", `Console (Ctrl + C to exit):\n`);
 
 				const logFilePath = path.join(platformPath, "bots", bot.name, "logs", "latest.log");
 
 				const stream = TailingStream.createReadStream(logFilePath, { timeout: 0 });
 
+				let message = "";
+
 				stream.on("data", (buffer) => {
-					process.stdout.write(buffer.toString().trimEnd());
+					process.stdout.write("\x1b[1A");
+					process.stdout.write(buffer.toString().trimEnd() + "\n");
+					process.stdout.write(message);
 				});
 
 				// Prevent input echo & handle exit keys
@@ -210,8 +214,19 @@ async function control_bot(botindex) {
 				process.stdin.setEncoding("utf-8");
 
 				process.stdin.on("data", function (key) {
-					if (key === "\u0003" || key === "q") {
+					if (key === "\u0003") {
 						cleanup();
+					} else if (key.toString() === "\r") {
+						if (message.length === 0) return;
+						bot.sendMessage(message);
+						message = "";
+						process.stdout.write(`\x1b[1G${message}`);
+					} else if (key.toString() === "\x08") {
+						message = message.substring(0, message.length - 1);
+						process.stdout.write(`\x1b[2K\x1b[1G${message}`);
+					} else {
+						message += key;
+						process.stdout.write(`\x1b[1G${message}`);
 					}
 				});
 

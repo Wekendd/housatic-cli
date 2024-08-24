@@ -189,9 +189,6 @@ parentPort.on("message", (msg) => {
 		case BotCommands.Stop:
 			bot.quit("Player Quit");
 			break;
-		case BotCommands.ViewConsole:
-			parentPort.postMessage({ type: BotCommands.ReturnConsole, logs: chatlog });
-			break;
 		case BotCommands.Refresh:
 			config = msg.config;
 			events = msg.events;
@@ -209,6 +206,8 @@ parentPort.on("message", (msg) => {
 				options.username = msg.name;
 			} catch (e) {}
 			break;
+		case BotCommands.SendMessage:
+			chatqueue.push(msg.message);
 		default:
 			break;
 	}
