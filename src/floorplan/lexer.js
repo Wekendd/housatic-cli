@@ -10,19 +10,12 @@ let lexer = moo.compile({
 	lbrace: "{",
 	rbrace: "}",
 
-	add: "+",
-	sub: "-",
-	mul: "*",
-	div: "/",
-	mod: "%",
+	comparison: ["==", "!=", "<=", ">=", "<", ">"],
+	assignment: ["=", "+=", "-=", "*=", "/="],
 	
-	equ_comp: "==",
-	lte_comp: "<=",
-	gte_comp: ">=",
-	lth_comp: "<",
-	gth_comp: ">",
-
-	assignment: "=",
+	logical_operator: ["&&", "||", "!"],
+	additive_operator: ["+", "-"],
+	multiplicative_operator: ["**", "*", "/", "%"],
 	
 	comment: {
 		match: /#[^\n]*/,
@@ -42,14 +35,15 @@ let lexer = moo.compile({
 		type: moo.keywords({
 			on: "on",
 			fn: "fn",
-			perm: "perm",
-			temp: "temp",
+			var: "var",
+			if: "if",
+			else: "else",
 			return: "return",
 			true: "true",
 			false: "false",
+			event: ["chat"],
 
 			command: "command",
-			run: "run",
 			wait: "wait",
 			log: "log",
 		}),

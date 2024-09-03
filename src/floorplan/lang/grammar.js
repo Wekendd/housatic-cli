@@ -11,192 +11,98 @@ function toNumber(d) {
 var grammar = {
     Lexer: lexer,
     ParserRules: [
-    {"name": "main", "symbols": ["_ml", "top_level_definitions", "_ml"]},
-    {"name": "top_level_definitions", "symbols": ["top_level_definition", "_ml", "top_level_definitions"], "postprocess": 
-        d => [d[0], ...d[2]]
-                },
-    {"name": "top_level_definitions", "symbols": ["top_level_definition"], "postprocess": 
-        d => [d[0]]
-                },
-    {"name": "top_level_definition", "symbols": ["function_def"], "postprocess": id},
-    {"name": "top_level_definition", "symbols": ["event_def"], "postprocess": id},
-    {"name": "top_level_definition", "symbols": ["executable_statements"]},
-    {"name": "function_def", "symbols": [{"literal":"fn"}, "_", "identifier", "_", {"literal":"("}, "_", "parameter_list", "_", {"literal":")"}, "_", "code_block"], "postprocess": 
-        d => ({
-            type: "function_def",
-            name: d[2],
-            parameters: d[6],
-            body: d[10],
-            start: tokenStart(d[0]),
-            end: d[10].end
-        })
-                },
-    {"name": "event_def$ebnf$1", "symbols": ["string_literal"], "postprocess": id},
+    {"name": "main", "symbols": ["top_levels"]},
+    {"name": "top_levels$ebnf$1", "symbols": []},
+    {"name": "top_levels$ebnf$1$subexpression$1", "symbols": ["__nl", "top_level"]},
+    {"name": "top_levels$ebnf$1", "symbols": ["top_levels$ebnf$1", "top_levels$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "top_levels", "symbols": ["top_level", "top_levels$ebnf$1"]},
+    {"name": "top_level", "symbols": ["function_def"]},
+    {"name": "top_level", "symbols": ["event_def"]},
+    {"name": "top_level", "symbols": ["statement"]},
+    {"name": "function_def$ebnf$1", "symbols": ["args"], "postprocess": id},
+    {"name": "function_def$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "function_def", "symbols": [{"literal":"fn"}, "__", "identifier", "_", {"literal":"("}, "function_def$ebnf$1", {"literal":")"}, "_", "code_block"]},
+    {"name": "event_def$ebnf$1$subexpression$1", "symbols": ["__", {"literal":"matches"}, "__", "criteria"]},
+    {"name": "event_def$ebnf$1", "symbols": ["event_def$ebnf$1$subexpression$1"], "postprocess": id},
     {"name": "event_def$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "event_def", "symbols": [{"literal":"on"}, "_", "identifier", "_", {"literal":"("}, "_", "event_def$ebnf$1", "_", {"literal":")"}, "_", "code_block"], "postprocess": 
-        d => ({
-            type: "event_def",
-            name: d[2],
-            criteria: d[6],
-            body: d[10],
-            start: tokenStart(d[0]),
-            end: d[10].end
-        })
-                },
-    {"name": "parameter_list", "symbols": [], "postprocess": () => []},
-    {"name": "parameter_list", "symbols": ["identifier"], "postprocess": d => [d[0]]},
-    {"name": "parameter_list", "symbols": ["identifier", "_", {"literal":","}, "_", "parameter_list"], "postprocess": 
-        d => [d[0], ...d[4]]
-                },
-    {"name": "code_block", "symbols": [{"literal":"{"}, "_ml", "executable_statements", "_ml", {"literal":"}"}], "postprocess": 
-        (d) => ({
-            type: "code_block",
-            statements: d[2],
-            start: tokenStart(d[0]),
-            end: tokenEnd(d[4])
-        })
-            },
-    {"name": "executable_statements", "symbols": ["executable_statement", "_ml", "executable_statements"], "postprocess": d => [d[0], ...d[2]]},
-    {"name": "executable_statements", "symbols": ["executable_statement"], "postprocess": d => [d[0]]},
-    {"name": "executable_statement", "symbols": ["return_statement"], "postprocess": id},
-    {"name": "executable_statement", "symbols": ["if_statement"]},
-    {"name": "executable_statement", "symbols": ["var_statement"], "postprocess": id},
-    {"name": "executable_statement", "symbols": ["line_comment"], "postprocess": id},
-    {"name": "return_statement", "symbols": [{"literal":"return"}, "__", "expression"], "postprocess": 
-        d => ({
-            type: "return_statement",
-            value: d[2],
-            start: tokenStart(d[0]),
-            end: d[2].end
-        })
-               },
+    {"name": "event_def", "symbols": [{"literal":"on"}, "__", (lexer.has("event") ? {type: "event"} : event), "event_def$ebnf$1", "_", "code_block"]},
+    {"name": "statement", "symbols": ["if_statement"]},
+    {"name": "statement", "symbols": ["call_statement"]},
+    {"name": "statement", "symbols": ["var_statement"]},
+    {"name": "statement", "symbols": ["return_statement"]},
+    {"name": "statement", "symbols": ["command_statement"]},
+    {"name": "statement", "symbols": ["wait_statement"]},
+    {"name": "statement", "symbols": ["log_statement"]},
+    {"name": "statement", "symbols": ["comment"]},
     {"name": "if_statement$ebnf$1", "symbols": []},
-    {"name": "if_statement$ebnf$1$subexpression$1", "symbols": ["_ml", {"literal":"else"}, "__", {"literal":"if"}, "_", {"literal":"("}, "_", "expression", "_", {"literal":")"}, "_", "code_block"]},
+    {"name": "if_statement$ebnf$1$subexpression$1", "symbols": ["_nl", {"literal":"else"}, "__", {"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block"]},
     {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "if_statement$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "if_statement$ebnf$2$subexpression$1", "symbols": ["_ml", {"literal":"else"}, "_", "code_block"]},
+    {"name": "if_statement$ebnf$2$subexpression$1", "symbols": ["_nl", {"literal":"else"}, "_", "code_block"]},
     {"name": "if_statement$ebnf$2", "symbols": ["if_statement$ebnf$2$subexpression$1"], "postprocess": id},
     {"name": "if_statement$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "if_statement", "symbols": [{"literal":"if"}, "_", {"literal":"("}, "_", "expression", "_", {"literal":")"}, "_", "code_block", "if_statement$ebnf$1", "if_statement$ebnf$2"]},
-    {"name": "var_statement", "symbols": ["perm_declaration"]},
-    {"name": "var_statement", "symbols": ["temp_declaration"]},
-    {"name": "var_statement", "symbols": ["var_assignment"]},
-    {"name": "perm_declaration", "symbols": [{"literal":"perm"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
-        d => ({
-            type: "perm_assignment",
-            var_name: d[0],
-            value: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "temp_declaration", "symbols": [{"literal":"temp"}, "_", "identifier", "_", {"literal":"="}, "_", "expression"], "postprocess": 
-        d => ({
-            type: "temp_assignment",
-            var_name: d[0],
-            value: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "var_assignment", "symbols": ["identifier", "_", {"literal":"="}, "_", "expression"]},
-    {"name": "expression", "symbols": ["boolean_expression"], "postprocess": id},
-    {"name": "boolean_expression", "symbols": ["comparison_expression"], "postprocess": id},
-    {"name": "boolean_expression", "symbols": ["comparison_expression", "_", "boolean_operator", "_", "boolean_expression"], "postprocess": 
-        d => ({
-            type: "binary_operation",
-            operator: convertToken(d[2]),
-            left: d[0],
-            right: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "boolean_operator", "symbols": [{"literal":"&&"}], "postprocess": id},
-    {"name": "boolean_operator", "symbols": [{"literal":"||"}], "postprocess": id},
-    {"name": "comparison_expression", "symbols": ["additive_expression"], "postprocess": id},
-    {"name": "comparison_expression", "symbols": ["additive_expression", "_", "comparison_operator", "_", "comparison_expression"], "postprocess": 
-        d => ({
-            type: "binary_operation",
-            operator: d[2],
-            left: d[0],
-            right: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "comparison_operator", "symbols": [{"literal":">"}], "postprocess": convertTokenId},
-    {"name": "comparison_operator", "symbols": [{"literal":">="}], "postprocess": convertTokenId},
-    {"name": "comparison_operator", "symbols": [{"literal":"<"}], "postprocess": convertTokenId},
-    {"name": "comparison_operator", "symbols": [{"literal":"<="}], "postprocess": convertTokenId},
-    {"name": "comparison_operator", "symbols": [{"literal":"=="}], "postprocess": convertTokenId},
-    {"name": "additive_expression", "symbols": ["multiplicative_expression"], "postprocess": id},
-    {"name": "additive_expression", "symbols": ["multiplicative_expression", "_", /[+-]/, "_", "additive_expression"], "postprocess": 
-        d => ({
-            type: "binary_operation",
-            operator: convertToken(d[2]),
-            left: d[0],
-            right: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "multiplicative_expression", "symbols": ["unary_expression"], "postprocess": id},
-    {"name": "multiplicative_expression", "symbols": ["unary_expression", "_", /[*/%]/, "_", "multiplicative_expression"], "postprocess": 
-        d => ({
-            type: "binary_operation",
-            operator: convertToken(d[2]),
-            left: d[0],
-            right: d[4],
-            start: d[0].start,
-            end: d[4].end
-        })
-                },
-    {"name": "unary_expression", "symbols": ["number"], "postprocess": id},
-    {"name": "unary_expression", "symbols": ["identifier"], "postprocess": 
-        d => ({
-            type: "var_reference",
-            var_name: d[0],
-            start: d[0].start,
-            end: d[0].end
-        })
-                },
-    {"name": "unary_expression", "symbols": ["string_literal"], "postprocess": id},
-    {"name": "unary_expression", "symbols": ["boolean_literal"], "postprocess": id},
-    {"name": "unary_expression", "symbols": ["boolean_literal"], "postprocess": id},
-    {"name": "unary_expression", "symbols": [{"literal":"("}, "expression", {"literal":")"}], "postprocess": 
-        data => data[1]
-                },
-    {"name": "boolean_literal", "symbols": [{"literal":"true"}], "postprocess": 
-        d => ({
-            type: "boolean_literal",
-            value: true,
-            start: tokenStart(d[0]),
-            end: tokenEnd(d[0])
-        })
-                },
-    {"name": "boolean_literal", "symbols": [{"literal":"false"}], "postprocess": 
-        d => ({
-            type: "boolean_literal",
-            value: false,
-            start: tokenStart(d[0]),
-            end: tokenEnd(d[0])
-        })
-                },
-    {"name": "__$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
-    {"name": "__$ebnf$1", "symbols": ["__$ebnf$1", (lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "__", "symbols": ["__$ebnf$1"]},
+    {"name": "if_statement", "symbols": [{"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block", "if_statement$ebnf$1", "if_statement$ebnf$2"]},
+    {"name": "call_statement$ebnf$1$subexpression$1$ebnf$1", "symbols": []},
+    {"name": "call_statement$ebnf$1$subexpression$1$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "_", "expression"]},
+    {"name": "call_statement$ebnf$1$subexpression$1$ebnf$1", "symbols": ["call_statement$ebnf$1$subexpression$1$ebnf$1", "call_statement$ebnf$1$subexpression$1$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "call_statement$ebnf$1$subexpression$1", "symbols": ["expression", "call_statement$ebnf$1$subexpression$1$ebnf$1"]},
+    {"name": "call_statement$ebnf$1", "symbols": ["call_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "call_statement$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "call_statement", "symbols": ["identifier", {"literal":"("}, "call_statement$ebnf$1", {"literal":")"}]},
+    {"name": "var_statement", "symbols": [{"literal":"var"}, "__", "identifier", "_", {"literal":"="}, "_", "expression"]},
+    {"name": "var_statement", "symbols": ["identifier", "_", /["=" "+=" "-=" "**=" "*=" "/=" "%="]/, "_", "expression"]},
+    {"name": "return_statement$ebnf$1$subexpression$1", "symbols": ["__", "expression"]},
+    {"name": "return_statement$ebnf$1", "symbols": ["return_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "return_statement", "symbols": [{"literal":"return"}, "return_statement$ebnf$1"]},
+    {"name": "command_statement", "symbols": [{"literal":"command"}, "__", "expression"]},
+    {"name": "wait_statement", "symbols": [{"literal":"wait"}, "__", "expression"]},
+    {"name": "log_statement", "symbols": [{"literal":"log"}, "__", "expression"]},
+    {"name": "code_block", "symbols": [{"literal":"{"}, "_nl", "top_levels", "_nl", {"literal":"}"}]},
+    {"name": "args$ebnf$1", "symbols": []},
+    {"name": "args$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "_", "identifier"]},
+    {"name": "args$ebnf$1", "symbols": ["args$ebnf$1", "args$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "args", "symbols": ["identifier", "args$ebnf$1"]},
+    {"name": "criteria", "symbols": ["string"]},
+    {"name": "expression", "symbols": ["infix_expr"]},
+    {"name": "infix_expr", "symbols": ["infix_expr", "_", {"literal":"||"}, "_", "infix_expr"]},
+    {"name": "infix_expr", "symbols": ["infix_expr", "_", {"literal":"&&"}, "_", "infix_expr"]},
+    {"name": "infix_expr", "symbols": ["comparison_expr"]},
+    {"name": "comparison_expr", "symbols": ["comparison_expr", "_", {"literal":"=="}, "_", "comparison_expr"]},
+    {"name": "comparison_expr", "symbols": ["comparison_expr", "_", {"literal":"!="}, "_", "comparison_expr"]},
+    {"name": "comparison_expr", "symbols": ["additive_expr"]},
+    {"name": "additive_expr", "symbols": ["additive_expr", "_", {"literal":"+"}, "_", "additive_expr"]},
+    {"name": "additive_expr", "symbols": ["additive_expr", "_", {"literal":"-"}, "_", "additive_expr"]},
+    {"name": "additive_expr", "symbols": ["multiplicative_expr"]},
+    {"name": "multiplicative_expr", "symbols": ["multiplicative_expr", "_", {"literal":"**"}, "_", "multiplicative_expr"]},
+    {"name": "multiplicative_expr", "symbols": ["multiplicative_expr", "_", {"literal":"*"}, "_", "multiplicative_expr"]},
+    {"name": "multiplicative_expr", "symbols": ["multiplicative_expr", "_", {"literal":"/"}, "_", "multiplicative_expr"]},
+    {"name": "multiplicative_expr", "symbols": ["multiplicative_expr", "_", {"literal":"%"}, "_", "multiplicative_expr"]},
+    {"name": "multiplicative_expr", "symbols": ["base_term"]},
+    {"name": "base_term", "symbols": [{"literal":"!"}, "base_term"]},
+    {"name": "base_term", "symbols": [{"literal":"-"}, "base_term"]},
+    {"name": "base_term", "symbols": ["call_statement"]},
+    {"name": "base_term", "symbols": [{"literal":"("}, "expression", {"literal":")"}]},
+    {"name": "base_term", "symbols": ["identifier"]},
+    {"name": "base_term", "symbols": ["number"]},
+    {"name": "base_term", "symbols": ["string"]},
     {"name": "_$ebnf$1", "symbols": []},
     {"name": "_$ebnf$1", "symbols": ["_$ebnf$1", (lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "_", "symbols": ["_$ebnf$1"]},
-    {"name": "_ml$ebnf$1", "symbols": []},
-    {"name": "_ml$ebnf$1", "symbols": ["_ml$ebnf$1", "multi_line_ws_char"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "_ml", "symbols": ["_ml$ebnf$1"]},
-    {"name": "multi_line_ws_char", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
-    {"name": "multi_line_ws_char", "symbols": [(lexer.has("nl") ? {type: "nl"} : nl)]},
-    {"name": "line_comment", "symbols": [(lexer.has("comment") ? {type: "comment"} : comment)], "postprocess": convertTokenId},
-    {"name": "string_literal", "symbols": [(lexer.has("string_literal") ? {type: "string_literal"} : string_literal)], "postprocess": convertTokenId},
-    {"name": "number", "symbols": [(lexer.has("number_literal") ? {type: "number_literal"} : number_literal)], "postprocess": convertTokenId},
-    {"name": "identifier", "symbols": [(lexer.has("identifier") ? {type: "identifier"} : identifier)], "postprocess": convertTokenId}
+    {"name": "__$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
+    {"name": "__$ebnf$1", "symbols": ["__$ebnf$1", (lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "__", "symbols": ["__$ebnf$1"]},
+    {"name": "_nl$ebnf$1", "symbols": []},
+    {"name": "_nl$ebnf$1", "symbols": ["_nl$ebnf$1", "nl_ws_char"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "_nl", "symbols": ["_nl$ebnf$1"]},
+    {"name": "__nl$ebnf$1", "symbols": ["nl_ws_char"]},
+    {"name": "__nl$ebnf$1", "symbols": ["__nl$ebnf$1", "nl_ws_char"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "__nl", "symbols": ["__nl$ebnf$1"]},
+    {"name": "nl_ws_char", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
+    {"name": "nl_ws_char", "symbols": [(lexer.has("nl") ? {type: "nl"} : nl)]},
+    {"name": "comment", "symbols": [(lexer.has("comment") ? {type: "comment"} : comment)]},
+    {"name": "number", "symbols": [(lexer.has("number_literal") ? {type: "number_literal"} : number_literal)]},
+    {"name": "string", "symbols": [(lexer.has("string_literal") ? {type: "string_literal"} : string_literal)]},
+    {"name": "identifier", "symbols": [(lexer.has("identifier") ? {type: "identifier"} : identifier)]}
 ]
   , ParserStart: "main"
 }
