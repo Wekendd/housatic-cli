@@ -101,16 +101,6 @@ module.exports = class Bot {
 		});
 	}
 
-	get_console() {
-		return new Promise((resolve, reject) => {
-			this.bot.on("message", (data) => {
-				if (data.type != BotCommands.ReturnConsole) return;
-				resolve(data.logs);
-			});
-			this.bot.postMessage({ type: BotCommands.ViewConsole });
-		});
-	}
-
 	async log_out() {
 		let hash = createHash(this.path);
 		let caches = await readdir(`${platformPath}/profiles/`);
@@ -130,6 +120,11 @@ module.exports = class Bot {
 		await rename_dir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
 		this.path = newName;
 		this.options.username = newName;
+	}
+
+	sendMessage(message) {
+		if (!this.status) return;
+		this.bot.postMessage({ type: BotCommands.SendMessage, message: message });
 	}
 };
 

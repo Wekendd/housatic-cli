@@ -2,12 +2,11 @@ module.exports = {
     BotCommands: {
         Start: 0,
         Stop: 1,
-        ViewConsole: 2,
-        ReturnConsole: 3,
-        Started: 4,
-        Refresh: 5,
-        RefreshDone: 6,
-        Rename: 7,
+        Started: 2,
+        Refresh: 3,
+        RefreshDone: 4,
+        Rename: 5,
+        SendMessage: 6
     },
     MainOptions: {
         Control: 0,
