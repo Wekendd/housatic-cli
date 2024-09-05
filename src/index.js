@@ -7,6 +7,11 @@ const { existsSync } = require("node:fs");
 const { MainOptions, BotOptions } = require("./enums");
 const platformPath = require("./path");
 
+const scriptDefaultCode = `housatic.on("house_spawn", () => {
+	mineflayer.chat("Hello world!");
+});
+`;
+
 const s = spinner();
 
 async function main() {
@@ -81,16 +86,8 @@ async function main() {
 						continue mainmenu;
 					}
 
-					const autojoin = await confirm({
-						message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?",
-					});
-					if (isCancel(autojoin)) {
-						cancel("Bot creation canceled");
-						continue mainmenu;
-					}
-
 					const owner = await text({
-						message: "House Owner: Who owns the house you want the bot to join?",
+						message: "House Owner: Who owns the house your bot will be living in?",
 						validate: (value) => {
 							if (value.length < 3 || value.length > 16 || !/^\w+$/i.test(value)) return "Please enter a valid username.";
 						},
@@ -101,7 +98,7 @@ async function main() {
 					}
 
 					const slot = await text({
-						message: "House Slot: When /visiting the house owner, where is the target house in the GUI? Enter a number.",
+						message: "House Slot: Upon running /visit, which house should the bot visit?",
 						validate: (value) => {
 							if (!/^\d+$/.test(value)) return "Please enter a number.";
 						},
@@ -112,19 +109,24 @@ async function main() {
 					}
 
 					s.start("Creating new bot");
+					// main bot dir
 					await mkdir(`${platformPath}/bots/${name}/`);
+					// bot manifest
 					await writeFile(
 						`${platformPath}/bots/${name}/bot.json`,
 						JSON.stringify({
 							house: {
+								autojoin: true,
 								owner: owner,
 								house_slot: slot,
-								autojoin: autojoin,
 							},
 						})
 					);
-					await writeFile(`${platformPath}/bots/${name}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
+					// script file
+					await writeFile(`${platformPath}/bots/${name}/index.js`, scriptDefaultCode);
+					// logs directory
 					await mkdir(`${platformPath}/bots/${name}/logs/`);
+
 					await refresh_bots();
 					s.stop("New bot created!");
 

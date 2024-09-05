@@ -1,4 +1,4 @@
-const { unlink, readdir, rename, mkdir, stat, rmdir } = require("node:fs/promises");
+const { unlink, readdir, readFile, rename, mkdir, stat, rmdir } = require("node:fs/promises");
 const { Worker } = require("worker_threads");
 const _path = require("path");
 const { BotCommands } = require("../enums");
