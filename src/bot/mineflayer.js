@@ -184,16 +184,34 @@ const custom_actions = {
 			case "house_spawn":
 				bot.on("spawn", async () => {
 					await sleep(1000);
-					if (botLocation() === "house") callback();
+					if (botLocation() !== "house") return
+
+					const event_object = {
+						type: "spawn",
+						timestamp: Date.now(),
+					}
+
+					callback(event_object);
 				});
 				break;
 
 			// event for chat since we want criterias + mineflayer chat messages are a bit goofy
-			case "house_chat":
-				bot.on("messagestr", (message, username) => {
+			case "chat":
+				bot.on("messagestr", (raw_message, username) => {
 					if (username !== "chat") return;
 					if (botLocation() !== "house") return;
-					callback();
+
+					const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
+					if (!chatRegex.test(raw_message)) return;
+
+					const { sender, message } = chatRegex.exec(raw_message).groups;
+					const event_object = {
+						type: "chat",
+						sender: sender,
+						message: message,
+						timestamp: Date.now(),
+					}
+					callback(event_object);
 				});
 				break;
 
