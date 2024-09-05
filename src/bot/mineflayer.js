@@ -70,7 +70,7 @@ function reloadEvents(first) {
 		if (botLocation() === "lobby_housing") {
 			// check config
 			if (config.house?.autojoin) {
-				return chatqueue.push(`/visit ${config.house.owner}`);
+				return chatqueue.push({ message: `/visit ${config.house.owner}` });
 			}
 		}
 	});
@@ -115,7 +115,9 @@ function reloadEvents(first) {
 		if (chatqueue.length == 0) return;
 		ticks--;
 		if (ticks <= 0) {
-			bot.chat(chatqueue.shift());
+			let message = chatqueue.shift();
+			bot.chat(message.message);
+			if (message.resolve) message.resolve();
 			if (chatqueue.length > 0) ticks = 30;
 		}
 	});
@@ -151,7 +153,7 @@ parentPort.on("message", (msg) => {
 			config = msg.config;
 			path = msg.path;
 
-			if (bot) chatqueue.push("/hub housing");
+			if (bot) chatqueue.push({ message: "/hub housing" });
 
 			reloadEvents(false);
 
@@ -164,7 +166,7 @@ parentPort.on("message", (msg) => {
 			} catch (e) {}
 			break;
 		case BotCommands.SendMessage:
-			chatqueue.push(msg.message);
+			chatqueue.push({ message: msg.message });
 		default:
 			break;
 	}
@@ -172,7 +174,12 @@ parentPort.on("message", (msg) => {
 
 const custom_actions = {
 	chat(message) {
-		chatqueue.push(message);
+		let res;
+		let promise = new Promise((resolve, reject) => {
+			res = resolve;
+		});
+		chatqueue.push({ message: message, resolve: res });
+		return promise; 
 	},
 	log(message) {
 		chatlog.push(message);
