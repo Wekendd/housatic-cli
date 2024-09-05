@@ -44,37 +44,25 @@ module.exports = class Bot {
 
 	refresh() {
 		return new Promise((resolve, reject) => {
-			let output = [];
+			try {
+				readFile(`${this.path}/bot.json`, "utf-8").then((configraw) => {
+					this.config = JSON.parse(configraw);
 
-			// Custom console object to capture logs
-			const customConsole = {
-				log: (...args) => {
-					// Join args into a string and push to the output array
-					output.push(args.join(" "));
-				},
-			};
-
-			const script = fs.readFileSync(`${this.path}/index.js`, "utf8");
-
-			const sandbox = {
-				bot: this.bot,
-				console: customConsole,
-			};
-
-			const context = vm.createContext(sandbox);
-
-			// execute code in context of bot object
-			vm.runInContext(script, context);
-
-			// After running, output the captured logs
-			console.log("Captured output:");
-			output.forEach((line) => console.log(line));
-
-
-			this.bot.on("message", (data) => {
-				if (data.type != BotCommands.RefreshDone) return;
-				resolve();
-			});
+					this.bot.postMessage({
+						type: BotCommands.Refresh,
+						config: this.config,
+						path: this.path,
+					});
+					
+					this.bot.on("message", (data) => {
+						if (data.type != BotCommands.RefreshDone) return;
+						resolve();
+					});
+				});
+			} catch (e) {
+				reject();
+				console.log(e);
+			}
 		});
 	}
 

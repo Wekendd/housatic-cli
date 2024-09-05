@@ -4,6 +4,8 @@ const mineflayer = require("mineflayer");
 const prompts = require("@clack/prompts");
 const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
+const fs = require("fs");
+const vm = require("vm");
 
 const s = prompts.spinner();
 
@@ -36,6 +38,43 @@ function reloadEvents(first) {
 
 	if (!first) bot.removeAllListeners();
 
+
+
+	let output = [];
+
+	// Custom console object to capture logs
+	const customConsole = {
+		log: (...args) => {
+			// Join args into a string and push to the output array
+			output.push(args.join(" "));
+		},
+	};
+	
+	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
+	
+	const sandbox = {
+		mineflayer: bot,
+		// housatic: housatic, // custom events, custom methods, etc
+		console: customConsole,
+	};
+	
+	const context = vm.createContext(sandbox);
+	
+	// execute code in context of bot object
+	try {
+		vm.runInContext(script, context);
+ 	} catch (e) {
+		console.log(e);
+		return;
+	}
+	
+	// After running, output the captured logs
+	console.log("Captured output:");
+	output.forEach((line) => console.log(line));
+
+
+
+
 	if (first)
 		bot.once("login", () => {
 			s.stop("Bot started");
@@ -43,46 +82,46 @@ function reloadEvents(first) {
 		});
 
 	// events/functions specified by player
-	for (let i = 0; i < events.length; i++) {
-		let event = events[i];
+	// for (let i = 0; i < events.length; i++) {
+	// 	let event = events[i];
 
-		// custom events (like house_spawn)
-		switch (event.type) {
-			case "house_spawn":
-				bot.on("spawn", async () => {
-					await sleep(1000);
-					if (inLobby() === false) executeActions(event.actions);
-				});
-				break;
+	// 	// custom events (like house_spawn)
+	// 	switch (event.type) {
+	// 		case "house_spawn":
+	// 			bot.on("spawn", async () => {
+	// 				await sleep(1000);
+	// 				if (inLobby() === false) executeActions(event.actions);
+	// 			});
+	// 			break;
 
-			// event for chat since we want criterias + mineflayer chat messages are a bit goofy
-			case "chat":
-				let matcher;
-				if (event.criteria.startsWith("/") && event.criteria.endsWith("/")) matcher = new RegExp(event.criteria.substring(1, event.criteria.length - 1));
-				else {
-					// using CT's formatting
-					let modifiedCriteria = event.criteria.replace(/([\\\(\)\[\]\{\}\?\*\+\^\$\-])/g, "\\$1"); // sanitize it so no stray tokens mess up the regex constructor
-					modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+?)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
-					modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+?\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
-					matcher = new RegExp("^" + modifiedCriteria);
-				}
-				bot.on("messagestr", (message, username) => {
-					if (username !== "chat") return;
-					if (inLobby() !== false && config.house?.autojoin) return;
-					let match = message.match(matcher);
-					if (match) {
-						executeActions(event.actions, match.groups);
-					}
-				});
-				break;
+	// 		// event for chat since we want criterias + mineflayer chat messages are a bit goofy
+	// 		case "chat":
+	// 			let matcher;
+	// 			if (event.criteria.startsWith("/") && event.criteria.endsWith("/")) matcher = new RegExp(event.criteria.substring(1, event.criteria.length - 1));
+	// 			else {
+	// 				// using CT's formatting
+	// 				let modifiedCriteria = event.criteria.replace(/([\\\(\)\[\]\{\}\?\*\+\^\$\-])/g, "\\$1"); // sanitize it so no stray tokens mess up the regex constructor
+	// 				modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+?)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
+	// 				modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+?\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
+	// 				matcher = new RegExp("^" + modifiedCriteria);
+	// 			}
+	// 			bot.on("messagestr", (message, username) => {
+	// 				if (username !== "chat") return;
+	// 				if (inLobby() !== false && config.house?.autojoin) return;
+	// 				let match = message.match(matcher);
+	// 				if (match) {
+	// 					executeActions(event.actions, match.groups);
+	// 				}
+	// 			});
+	// 			break;
 
-			default:
-				bot.on(event.type, () => {
-					executeActions(event.actions);
-				});
-				break;
-		}
-	}
+	// 		default:
+	// 			bot.on(event.type, () => {
+	// 				executeActions(event.actions);
+	// 			});
+	// 			break;
+	// 	}
+	// }
 
 	// required events to function
 
@@ -191,7 +230,6 @@ parentPort.on("message", (msg) => {
 			break;
 		case BotCommands.Refresh:
 			config = msg.config;
-			events = msg.events;
 			path = msg.path;
 
 			if (bot) chatqueue.push("/hub housing");
