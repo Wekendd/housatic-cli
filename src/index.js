@@ -4,8 +4,13 @@ const path = require("path");
 const { refresh_bots, getBots } = require("./bots");
 const { rm, writeFile, mkdir } = require("node:fs/promises");
 const { existsSync } = require("node:fs");
-const { MainOptions, BotOptions } = require("./enums");
+const { MainOptions, BotOptions, ConfigureOptions } = require("./enums");
 const platformPath = require("./path");
+
+const scriptDefaultCode = `housatic.on("house_spawn", () => {
+	mineflayer.chat("Hello world!");
+});
+`;
 
 const s = spinner();
 
@@ -81,16 +86,8 @@ async function main() {
 						continue mainmenu;
 					}
 
-					const autojoin = await confirm({
-						message: "House Autojoin: Should your bot join a specified house upon joining Hypixel?",
-					});
-					if (isCancel(autojoin)) {
-						cancel("Bot creation canceled");
-						continue mainmenu;
-					}
-
 					const owner = await text({
-						message: "House Owner: Who owns the house you want the bot to join?",
+						message: "House Owner: Who owns the house your bot will be living in?",
 						validate: (value) => {
 							if (value.length < 3 || value.length > 16 || !/^\w+$/i.test(value)) return "Please enter a valid username.";
 						},
@@ -101,7 +98,7 @@ async function main() {
 					}
 
 					const slot = await text({
-						message: "House Slot: When /visiting the house owner, where is the target house in the GUI? Enter a number.",
+						message: "House Slot: Upon running /visit, which house should the bot visit?",
 						validate: (value) => {
 							if (!/^\d+$/.test(value)) return "Please enter a number.";
 						},
@@ -112,19 +109,24 @@ async function main() {
 					}
 
 					s.start("Creating new bot");
+					// main bot dir
 					await mkdir(`${platformPath}/bots/${name}/`);
+					// bot manifest
 					await writeFile(
 						`${platformPath}/bots/${name}/bot.json`,
 						JSON.stringify({
 							house: {
+								autojoin: true,
 								owner: owner,
-								house_slot: slot,
-								autojoin: autojoin,
+								slot: slot,
 							},
-						})
+						}, null, 2)
 					);
-					await writeFile(`${platformPath}/bots/${name}/events.json`, JSON.stringify([{ type: "house_spawn", actions: [{ type: "chat", message: "/ac Hello World!" }] }]));
+					// script file
+					await writeFile(`${platformPath}/bots/${name}/index.js`, scriptDefaultCode);
+					// logs directory
 					await mkdir(`${platformPath}/bots/${name}/logs/`);
+
 					await refresh_bots();
 					s.stop("New bot created!");
 
@@ -164,12 +166,12 @@ async function control_bot(botindex) {
 						{ value: BotOptions.LogOut, label: "Log Out" },
 				  ]),
 			{ value: BotOptions.Console, label: "View Console" },
-			{ value: BotOptions.Rename, label: "Rename bot" },
+			{ value: BotOptions.Configure, label: "Configure bot" },
 			{ value: BotOptions.Done, label: "Done (return to main menu)" },
 		];
 
 		const action = await select({
-			message: "Bot Control Panel",
+			message: `Control Panel: ${bot.name}`,
 			options: paneloptions,
 		});
 		if (isCancel(action) || action === BotOptions.Done) {
@@ -178,8 +180,10 @@ async function control_bot(botindex) {
 
 		switch (action) {
 			case BotOptions.Refresh:
+				s.start("Refreshing bot");
 				await bot.refresh();
-				break controlmenu;
+				s.stop("Bot refreshed!");
+				continue controlmenu;
 
 			case BotOptions.Done:
 				break controlmenu;
@@ -248,29 +252,91 @@ async function control_bot(botindex) {
 				s.stop("Logged out!");
 				continue controlmenu;
 
-			case BotOptions.Rename:
-				let newName = await text({
-					message: "What do you want to rename it to?",
-					validate: (value) => {
-						if (!value) return "Please enter a name.";
-						if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
-						if (!valid_dir(value)) return "Invalid bot name!";
-					},
+			case BotOptions.Configure:
+				let setting = await select({
+					message: `Configuring ${bot.name}`,
+					options: [
+						{ value: ConfigureOptions.Rename, label: "Rename bot", hint: `Current value: ${bot.name}` },
+						{ value: ConfigureOptions.HouseOwner, label: "Change house owner", hint: `Current value: ${bot.config.house.owner}` },
+						{ value: ConfigureOptions.HouseSlot, label: "Change house slot", hint: `Current value: ${bot.config.house.slot}` },
+						{ value: ConfigureOptions.Cancel, label: "Cancel" },
+					],
 				});
-				if (isCancel(newName)) {
-					cancel("Rename operation canceled");
-					continue controlmenu;
-				}
 
-				try {
-					s.start("Renaming bot");
-					await bot.rename(newName);
-					s.stop("Bot renamed!");
-				} catch (e) {
-					log.error("Error!", e.message);
-					break controlmenu;
-				}
+				switch (setting) {
+					case ConfigureOptions.Rename:
+						let new_name = await text({
+							message: "Enter a new name for the bot!",
+							validate: (value) => {
+								if (!value) return "Please enter a name.";
+								if (existsSync(`${platformPath}/bots/${value}`)) return "A bot is already named that!";
+								if (!valid_dir(value)) return "Invalid bot name!";
+							},
+						});
+						if (isCancel(new_name)) {
+							cancel("Rename operation canceled");
+							break;
+						}
 
+						try {
+							s.start("Renaming bot");
+							await bot.rename(new_name);
+							s.stop("Bot renamed!");
+						} catch (e) {
+							log.error("Error!", e.message);
+							break;
+						}
+
+						await refresh_bots();
+						return await control_bot(botindex);
+						break;
+
+					case ConfigureOptions.HouseOwner:
+						let new_owner = await text({
+							message: "Enter a new username for the bot to visit!",
+							validate: (value) => {
+								if (value.length < 3 || value.length > 16 || !/^\w+$/i.test(value)) return "Please enter a valid username.";
+							},
+						});
+						if (isCancel(new_owner)) {
+							cancel("House owner change canceled");
+							break;
+						}
+
+						upd_config = bot.config;
+						upd_config.house.owner = new_owner;
+
+						s.start("Changing target house owner");
+						await writeFile(`${bot.path}/bot.json`, JSON.stringify(upd_config, null, 2), (err) => {
+							if (err) return log.error("Error while writing to bot.json!", e.message);
+						});
+						s.stop(`Changed target house owner to ${new_owner}!`);
+
+						break;
+
+					case ConfigureOptions.HouseSlot:
+						let new_slot = await text({
+							message: "Enter a new house slot for the bot to visit!",
+							validate: (value) => {
+								if (!/^\d+$/.test(value)) return "Please enter a number.";
+							},
+						});
+						if (isCancel(new_slot)) {
+							cancel("House slot change canceled");
+							break;
+						}
+
+						upd_config = bot.config;
+						upd_config.house.slot = new_slot;
+
+						s.start("Changing target house slot");
+						await writeFile(`${bot.path}/bot.json`, JSON.stringify(upd_config, null, 2), (err) => {
+							if (err) return log.error("Error while writing to bot.json!", e.message);
+						});
+						s.stop(`Changed target house slot to ${new_slot}!`);
+
+						break;
+				}
 				continue controlmenu;
 
 			default:

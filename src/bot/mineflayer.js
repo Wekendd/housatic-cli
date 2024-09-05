@@ -4,6 +4,8 @@ const mineflayer = require("mineflayer");
 const prompts = require("@clack/prompts");
 const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
+const fs = require("fs");
+const vm = require("vm");
 
 const s = prompts.spinner();
 
@@ -24,11 +26,11 @@ function sleep(wait) {
 	return new Promise((resolve) => setTimeout(() => resolve(), wait));
 }
 
-function inLobby() {
-	if (bot.scoreboard[1] === undefined) return undefined; // In limbo
-	if (bot.scoreboard[1].name === "Housing") return true; // In the housing lobby
-	else if (bot.scoreboard[1].name === "housing") return false; // In a house
-	else return undefined; // In a different lobby or smth else
+function botLocation() {
+	if (bot.scoreboard[1] === undefined) return "limbo"; // In limbo
+	if (bot.scoreboard[1].name === "Housing") return "lobby_housing"; // In the housing lobby
+	else if (bot.scoreboard[1].name === "housing") return "house"; // In a house
+	else return "lobby_other"; // In a different lobby or smth else
 }
 
 function reloadEvents(first) {
@@ -36,77 +38,59 @@ function reloadEvents(first) {
 
 	if (!first) bot.removeAllListeners();
 
-	if (first)
+	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
+
+	const sandbox = {
+		mineflayer: bot,
+		housatic: custom_actions, // custom events, custom methods, etc
+	};
+
+	const context = vm.createContext(sandbox);
+
+	// execute code in context of bot object
+	try {
+		vm.runInContext(script, context);
+	} catch (e) {
+		return console.log(`Scripting error! ${e}`);
+	}
+
+	if (first) {
 		bot.once("login", () => {
 			s.stop("Bot started");
 			setTimeout(() => parentPort.postMessage({ type: BotCommands.Started }), 100); // slight delay because apparently the spinner doesn't instantly stop or smth stupid
 		});
-
-	// events/functions specified by player
-	for (let i = 0; i < events.length; i++) {
-		let event = events[i];
-
-		// custom events (like house_spawn)
-		switch (event.type) {
-			case "house_spawn":
-				bot.on("spawn", async () => {
-					await sleep(1000);
-					if (inLobby() === false) executeActions(event.actions);
-				});
-				break;
-
-			// event for chat since we want criterias + mineflayer chat messages are a bit goofy
-			case "chat":
-				let matcher;
-				if (event.criteria.startsWith("/") && event.criteria.endsWith("/")) matcher = new RegExp(event.criteria.substring(1, event.criteria.length - 1));
-				else {
-					// using CT's formatting
-					let modifiedCriteria = event.criteria.replace(/([\\\(\)\[\]\{\}\?\*\+\^\$\-])/g, "\\$1"); // sanitize it so no stray tokens mess up the regex constructor
-					modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{([^*]+?)\\\}/g, "(?<$1>.*)"); // named groups as ${name}
-					modifiedCriteria = modifiedCriteria.replace(/\\\$\\\{[*]+?\\\}/g, "(?:$1)"); // unnamed groups becoming noncaptures such as ${*}
-					matcher = new RegExp("^" + modifiedCriteria);
-				}
-				bot.on("messagestr", (message, username) => {
-					if (username !== "chat") return;
-					if (inLobby() !== false && config.house?.autojoin) return;
-					let match = message.match(matcher);
-					if (match) {
-						executeActions(event.actions, match.groups);
-					}
-				});
-				break;
-
-			default:
-				bot.on(event.type, () => {
-					executeActions(event.actions);
-				});
-				break;
-		}
 	}
 
 	// required events to function
 
+	// Autojoin commands
 	bot.on("spawn", async () => {
 		await sleep(1000);
-		if (inLobby() === undefined) return chatqueue.push("/hub housing");
-		if (inLobby() === true) {
+		if (botLocation() === "limbo") return chatqueue.push("/hub housing");
+		if (botLocation() === "lobby_housing") {
 			// check config
 			if (config.house?.autojoin) {
 				return chatqueue.push(`/visit ${config.house.owner}`);
 			}
 		}
 	});
+
+	// Autojoin visit GUI
 	bot.on("windowOpen", (window) => {
-		if (!inLobby()) return;
+		if (botLocation() !== "lobby_housing") return;
 		if (!config.house?.autojoin) return;
 		window.slots = window.slots.filter((n) => n); // filter out blank slots
-		bot.simpleClick.leftMouse(window.slots[config.house.house_slot - 1].slot);
+		bot.simpleClick.leftMouse(window.slots[config.house.slot - 1].slot);
 	});
+
+	// Log chat
 	bot.on("messagestr", (message, username) => {
 		if (username !== "chat") return;
 		chatlog.push(message);
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 	});
+
+	// Zip log
 	bot.on("end", async (reason) => {
 		if (reason == "Player Quit") {
 			// write latest.log to zipped file
@@ -120,6 +104,8 @@ function reloadEvents(first) {
 			parentPort.postMessage({ type: BotCommands.Stop });
 		} else initBot(false);
 	});
+
+	// Quit on error
 	bot.on("error", (err) => {
 		bot.quit();
 	});
@@ -138,34 +124,6 @@ function reloadEvents(first) {
 async function initBot(first) {
 	bot = mineflayer.createBot(options);
 	reloadEvents(first);
-}
-
-async function executeActions(actions, args) {
-	for (let i = 0; i < actions.length; i++) {
-		let action = structuredClone(actions[i]);
-
-		switch (action.type) {
-			case "chat":
-				for (let key in args) {
-					action.message = action.message.replaceAll(`\${${key}}`, args[key]);
-				}
-				chatqueue.push(action.message);
-				break;
-			case "wait":
-				await sleep(action.length);
-				break;
-			case "log":
-				for (let key in args) {
-					action.message = action.message.replaceAll(`\${${key}}`, args[key]);
-				}
-				chatlog.push(action.message);
-				writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
-				break;
-			case "mineflayer_method":
-				new Function(["bot"], "bot." + action.method)(bot);
-				break;
-		}
-	}
 }
 
 parentPort.on("message", (msg) => {
@@ -191,7 +149,6 @@ parentPort.on("message", (msg) => {
 			break;
 		case BotCommands.Refresh:
 			config = msg.config;
-			events = msg.events;
 			path = msg.path;
 
 			if (bot) chatqueue.push("/hub housing");
@@ -212,3 +169,36 @@ parentPort.on("message", (msg) => {
 			break;
 	}
 });
+
+const custom_actions = {
+	chat(message) {
+		chatqueue.push(message);
+	},
+	log(message) {
+		chatlog.push(message);
+		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
+	},
+
+	on(event, callback) {
+		switch (event) {
+			case "house_spawn":
+				bot.on("spawn", async () => {
+					await sleep(1000);
+					if (botLocation() === "house") callback();
+				});
+				break;
+
+			// event for chat since we want criterias + mineflayer chat messages are a bit goofy
+			case "house_chat":
+				bot.on("messagestr", (message, username) => {
+					if (username !== "chat") return;
+					if (botLocation() !== "house") return;
+					callback();
+				});
+				break;
+
+			default:
+				throw Error(`Unknown event: ${event}`);
+		}
+	},
+};

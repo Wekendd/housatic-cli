@@ -18,9 +18,15 @@ module.exports = {
         Start: 0,
         Stop: 1,
         Refresh: 2,
-        Rename: 3,
+        Configure: 3,
         Console: 4,
         Done: 5,
         LogOut: 6,
+    },
+    ConfigureOptions: {
+        Rename: 0,
+        HouseOwner: 1,
+        HouseSlot: 2,
+        Cancel: 3,
     }
 }

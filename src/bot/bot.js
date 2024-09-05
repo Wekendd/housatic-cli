@@ -44,27 +44,20 @@ module.exports = class Bot {
 
 	refresh() {
 		return new Promise((resolve, reject) => {
-			// this is disgusting never let me code again
 			try {
 				readFile(`${this.path}/bot.json`, "utf-8").then((configraw) => {
 					this.config = JSON.parse(configraw);
-					try {
-						readFile(`${this.path}/events.json`, "utf-8").then((eventsraw) => {
-							this.events = JSON.parse(eventsraw);
-							this.bot.postMessage({
-								type: BotCommands.Refresh,
-								config: this.config,
-								events: this.events,
-								path: this.path,
-							});
-							this.bot.on("message", (data) => {
-								if (data.type != BotCommands.RefreshDone) return;
-								resolve();
-							});
-						});
-					} catch (e) {
-						this.events = null;
-					}
+
+					this.bot.postMessage({
+						type: BotCommands.Refresh,
+						config: this.config,
+						path: this.path,
+					});
+					
+					this.bot.on("message", (data) => {
+						if (data.type != BotCommands.RefreshDone) return;
+						resolve();
+					});
 				});
 			} catch (e) {
 				reject();
@@ -117,7 +110,7 @@ module.exports = class Bot {
 		if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);
 		if (caches.includes(`${hash}_xbl-cache.json`)) await rename(`${platformPath}/profiles/${hash}_xbl-cache.json`, `${platformPath}/profiles/${newHash}_xbl-cache.json`);
 		this.bot.postMessage({ type: BotCommands.Rename, name: newName });
-		await rename_dir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
+		await rename_dir(this.path, `${platformPath}/bots/${newName}`);
 		this.path = newName;
 		this.options.username = newName;
 	}
