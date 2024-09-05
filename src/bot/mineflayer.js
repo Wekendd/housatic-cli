@@ -41,6 +41,36 @@ function reloadEvents(first) {
 	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
 
 	const sandbox = {
+		register(event, callback) {
+			switch (event) {
+				case "house_spawn":
+					bot.on("spawn", async () => {
+						await sleep(1000);
+						if (botLocation() !== "house") return;
+	
+						callback();
+					});
+					break;
+	
+				// event for chat since we want criterias + mineflayer chat messages are a bit goofy
+				case "chat":
+					bot.on("messagestr", (raw_message, username) => {
+						if (username !== "chat") return;
+						if (botLocation() !== "house") return;
+	
+						const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
+						if (!chatRegex.test(raw_message)) return;
+	
+						const { sender, message } = chatRegex.exec(raw_message).groups;
+						callback(sender, message);
+					});
+					break;
+	
+				default:
+					bot.on(event, (...args) => callback(...args));
+					break;
+			}
+		},
 		mineflayer: bot,
 		housatic: custom_actions, // custom events, custom methods, etc
 	};
@@ -185,45 +215,9 @@ const custom_actions = {
 		chatlog.push(message);
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 	},
-
-	on(event, callback) {
-		switch (event) {
-			case "house_spawn":
-				bot.on("spawn", async () => {
-					await sleep(1000);
-					if (botLocation() !== "house") return
-
-					const event_object = {
-						type: "spawn",
-						timestamp: Date.now(),
-					}
-
-					callback(event_object);
-				});
-				break;
-
-			// event for chat since we want criterias + mineflayer chat messages are a bit goofy
-			case "chat":
-				bot.on("messagestr", (raw_message, username) => {
-					if (username !== "chat") return;
-					if (botLocation() !== "house") return;
-
-					const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
-					if (!chatRegex.test(raw_message)) return;
-
-					const { sender, message } = chatRegex.exec(raw_message).groups;
-					const event_object = {
-						type: "chat",
-						sender: sender,
-						message: message,
-						timestamp: Date.now(),
-					}
-					callback(event_object);
-				});
-				break;
-
-			default:
-				throw Error(`Unknown event: ${event}`);
-		}
-	},
+	wait(length) {
+		return new Promise((resolve, reject) => {
+			setTimeout(resolve, length);
+		});
+	}
 };
