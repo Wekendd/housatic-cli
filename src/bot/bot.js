@@ -110,7 +110,7 @@ module.exports = class Bot {
 		if (caches.includes(`${hash}_mca-cache.json`)) await rename(`${platformPath}/profiles/${hash}_mca-cache.json`, `${platformPath}/profiles/${newHash}_mca-cache.json`);
 		if (caches.includes(`${hash}_xbl-cache.json`)) await rename(`${platformPath}/profiles/${hash}_xbl-cache.json`, `${platformPath}/profiles/${newHash}_xbl-cache.json`);
 		this.bot.postMessage({ type: BotCommands.Rename, name: newName });
-		await rename_dir(`${platformPath}/bots/${this.path}`, `${platformPath}/bots/${newName}`);
+		await rename_dir(this.path, `${platformPath}/bots/${newName}`);
 		this.path = newName;
 		this.options.username = newName;
 	}

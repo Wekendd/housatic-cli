@@ -80,7 +80,7 @@ function reloadEvents(first) {
 		if (botLocation() !== "lobby_housing") return;
 		if (!config.house?.autojoin) return;
 		window.slots = window.slots.filter((n) => n); // filter out blank slots
-		bot.simpleClick.leftMouse(window.slots[config.house.house_slot - 1].slot);
+		bot.simpleClick.leftMouse(window.slots[config.house.slot - 1].slot);
 	});
 
 	// Log chat
