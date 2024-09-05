@@ -7,8 +7,8 @@ const { existsSync } = require("node:fs");
 const { MainOptions, BotOptions, ConfigureOptions } = require("./enums");
 const platformPath = require("./path");
 
-const scriptDefaultCode = `housatic.on("house_spawn", () => {
-	mineflayer.chat("Hello world!");
+const scriptDefaultCode = `register("house_spawn", () => {
+	housatic.chat("Hello world!");
 });
 `;
 
