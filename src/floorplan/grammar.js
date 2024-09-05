@@ -3,7 +3,56 @@
 (function () {
 function id(x) { return x[0]; }
 
-const { lexer, tokenStart, tokenEnd, convertToken, convertTokenId } = require("../lexer.js");
+const moo = require("moo");
+
+let lexer = moo.compile({
+	ws: /[ \t]+/,
+	nl: { match: /(?:\r\n|\r|\n)/, lineBreaks: true },
+
+	comma: ",",
+	lparen: "(",
+	rparen: ")",
+	lbrace: "{",
+	rbrace: "}",
+
+	comparison_operator: ["==", "!=", "<=", ">=", "<", ">"],
+	assignment_operator: ["=", "+=", "-=", "*=", "/="],
+	
+	logical_operator: ["&&", "||"],
+	arithmetic_operator: ["+", "-", "**", "*", "/", "%", "!"],
+	
+	comment: {
+		match: /#[^\n]*/,
+		value: (s) => s.substring(1).trimStart(),
+	},
+
+	string_literal: {
+		match: /"(?:[^\n\\"]|\\["\\ntbfr])*"/,
+		value: (s) => JSON.parse(s),
+	},
+	number_literal: {
+		match: /[0-9]+(?:\.[0-9]+)?/,
+		value: (s) => Number(s),
+	},
+	identifier: {
+		match: /[a-zA-Z_][a-zA-Z0-9_]*/,
+		type: moo.keywords({
+			on: "on",
+			fn: "fn",
+			var: "var",
+			if: "if",
+			else: "else",
+			return: "return",
+			true: "true",
+			false: "false",
+			event: ["house_spawn", "chat"],
+
+			command: "command",
+			wait: "wait",
+			log: "log",
+		}),
+	},
+});
 var grammar = {
     Lexer: lexer,
     ParserRules: [
@@ -26,16 +75,16 @@ var grammar = {
             identifier: d[2],
             args: d[5],
             body: d[8]
-        } } },
+        }} },
     {"name": "event_def$ebnf$1$subexpression$1", "symbols": ["__", {"literal":"matches"}, "__", "criteria"]},
     {"name": "event_def$ebnf$1", "symbols": ["event_def$ebnf$1$subexpression$1"], "postprocess": id},
     {"name": "event_def$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "event_def", "symbols": [{"literal":"on"}, "__", (lexer.has("event") ? {type: "event"} : event), "event_def$ebnf$1", "_", "code_block"], "postprocess":  d => { return {
+    {"name": "event_def", "symbols": [{"literal":"on"}, "__", "event", "event_def$ebnf$1", "_", "code_block"], "postprocess":  d => { return {
             type: "event_def",
             event: d[2],
-            criteria: d[6],
-            body: d[8]
-        } } },
+            criteria: d[3][3],
+            body: d[5]
+        }} },
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["call_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["var_statement"], "postprocess": id},
@@ -48,18 +97,18 @@ var grammar = {
     {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "else_if_statement"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "if_statement$ebnf$2", "symbols": ["else_statement"], "postprocess": id},
     {"name": "if_statement$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "if_statement", "symbols": [{"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block", "_", "if_statement$ebnf$1", "_", "if_statement$ebnf$2"], "postprocess": 
-        d => {
-            return {
-                type: "if_statement",
-                condition: d[3],
-                body: d[6],
-                else_ifs: d[8],
-                else: d[10]
-            }
-        }
-            },
-    {"name": "else_if_statement", "symbols": [{"literal":"else"}, "__", {"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block"], "postprocess": d => { return { type: "else_if_statement", condition: d[5], body: d[8] } }},
+    {"name": "if_statement", "symbols": [{"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block", "if_statement$ebnf$1", "_", "if_statement$ebnf$2"], "postprocess":  d => { return {
+            type: "if_statement",
+            condition: d[3],
+            body: d[6],
+            else_ifs: d[7],
+            else: d[9]
+        }} },
+    {"name": "else_if_statement", "symbols": ["_", {"literal":"else"}, "__", {"literal":"if"}, "_", {"literal":"("}, "expression", {"literal":")"}, "_", "code_block"], "postprocess":  d => { return { 
+            type: "else_if_statement",
+            condition: d[6],
+            body: d[9]
+        }} },
     {"name": "else_statement", "symbols": [{"literal":"else"}, "_", "code_block"], "postprocess": d => { return { type: "else_statement", body: d[2] } }},
     {"name": "call_statement$ebnf$1", "symbols": ["call_args"], "postprocess": id},
     {"name": "call_statement$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
@@ -151,7 +200,8 @@ var grammar = {
     {"name": "boolean$subexpression$1", "symbols": [{"literal":"true"}]},
     {"name": "boolean$subexpression$1", "symbols": [{"literal":"false"}]},
     {"name": "boolean", "symbols": ["boolean$subexpression$1"], "postprocess": d => { return { type: "literal", value: d.join("") === "true", line: d[0].line, col: d[0].col } }},
-    {"name": "identifier", "symbols": [(lexer.has("identifier") ? {type: "identifier"} : identifier)], "postprocess": d => { return { type: "identifier", value: d.join(""), line: d[0].line, col: d[0].col } }}
+    {"name": "identifier", "symbols": [(lexer.has("identifier") ? {type: "identifier"} : identifier)], "postprocess": d => { return { type: "identifier", value: d.join(""), line: d[0].line, col: d[0].col } }},
+    {"name": "event", "symbols": [(lexer.has("event") ? {type: "event"} : event)], "postprocess": d => { return { type: "event", event: d[0].value,  } }}
 ]
   , ParserStart: "main"
 }

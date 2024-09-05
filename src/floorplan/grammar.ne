@@ -1,6 +1,58 @@
+# ========== LEXER ==========
 @{%
-const { lexer } = require("../lexer.js");
+const moo = require("moo");
+
+let lexer = moo.compile({
+	ws: /[ \t]+/,
+	nl: { match: /(?:\r\n|\r|\n)/, lineBreaks: true },
+
+	comma: ",",
+	lparen: "(",
+	rparen: ")",
+	lbrace: "{",
+	rbrace: "}",
+
+	comparison_operator: ["==", "!=", "<=", ">=", "<", ">"],
+	assignment_operator: ["=", "+=", "-=", "*=", "/="],
+	
+	logical_operator: ["&&", "||"],
+	arithmetic_operator: ["+", "-", "**", "*", "/", "%", "!"],
+	
+	comment: {
+		match: /#[^\n]*/,
+		value: (s) => s.substring(1).trimStart(),
+	},
+
+	string_literal: {
+		match: /"(?:[^\n\\"]|\\["\\ntbfr])*"/,
+		value: (s) => JSON.parse(s),
+	},
+	number_literal: {
+		match: /[0-9]+(?:\.[0-9]+)?/,
+		value: (s) => Number(s),
+	},
+	identifier: {
+		match: /[a-zA-Z_][a-zA-Z0-9_]*/,
+		type: moo.keywords({
+			on: "on",
+			fn: "fn",
+			var: "var",
+			if: "if",
+			else: "else",
+			return: "return",
+			true: "true",
+			false: "false",
+			event: ["house_spawn", "chat"],
+
+			command: "command",
+			wait: "wait",
+			log: "log",
+		}),
+	},
+});
 %}
+
+# ========== PARSER ==========
 
 @lexer lexer
 
@@ -28,15 +80,15 @@ function_def -> "fn" __ identifier _ "(" function_args:? ")" _ code_block
         identifier: d[2],
         args: d[5],
         body: d[8]
-    } } %}
+    }} %}
 
-event_def -> "on" __ %event (__ "matches" __ criteria):? _ code_block
+event_def -> "on" __ event (__ "matches" __ criteria):? _ code_block
     {% d => { return {
         type: "event_def",
         event: d[2],
-        criteria: d[6],
-        body: d[8]
-    } } %}
+        criteria: d[3][3],
+        body: d[5]
+    }} %}
 
 # ---------- Statements
 
@@ -52,20 +104,21 @@ statement
 
 # --
 
-if_statement -> "if" _ "(" expression ")" _ code_block _ else_if_statement:* _ else_statement:?
-    {%
-        d => {
-            return {
-                type: "if_statement",
-                condition: d[3],
-                body: d[6],
-                else_ifs: d[8],
-                else: d[10]
-            }
-        }
-    %}
+if_statement -> "if" _ "(" expression ")" _ code_block else_if_statement:* _ else_statement:?
+    {% d => { return {
+        type: "if_statement",
+        condition: d[3],
+        body: d[6],
+        else_ifs: d[7],
+        else: d[9]
+    }} %}
 
-else_if_statement -> "else" __ "if" _ "(" expression ")" _ code_block {% d => { return { type: "else_if_statement", condition: d[5], body: d[8] } } %}
+else_if_statement -> _ "else" __ "if" _ "(" expression ")" _ code_block
+    {% d => { return { 
+        type: "else_if_statement",
+        condition: d[6],
+        body: d[9]
+    }} %}
 else_statement -> "else" _ code_block {% d => { return { type: "else_statement", body: d[2] } } %}
 
 call_statement -> identifier "(" call_args:? ")"
@@ -152,3 +205,4 @@ number -> %number_literal {% d => { return { type: "literal", value: Number(d.jo
 string -> %string_literal {% d => { return { type: "literal", value: d.join(""), line: d[0].line, col: d[0].col } } %}
 boolean -> ("true"|"false") {% d => { return { type: "literal", value: d.join("") === "true", line: d[0].line, col: d[0].col } } %}
 identifier -> %identifier {% d => { return { type: "identifier", value: d.join(""), line: d[0].line, col: d[0].col } } %}
+event -> %event {% d => { return { type: "event", event: d[0].value,  } } %}
