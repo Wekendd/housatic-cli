@@ -207,9 +207,9 @@ async function control_bot(botindex) {
 				let message = "";
 
 				stream.on("data", (buffer) => {
-					process.stdout.write("\x1b[1A");
+					process.stdout.write("\x1b[2K\x1b[1A");
 					process.stdout.write(buffer.toString().trimEnd() + "\n");
-					process.stdout.write(message);
+					process.stdout.write(`\x1b[32mType to chat: \x1b[0m${message}`);
 				});
 
 				// Prevent input echo & handle exit keys
@@ -220,17 +220,19 @@ async function control_bot(botindex) {
 				process.stdin.on("data", function (key) {
 					if (key === "\u0003") {
 						cleanup();
-					} else if (key.toString() === "\r") {
+					} else if (["\u001b[C", "\u001b[D", "\u001b[A", "\u001b[B"].includes(key)) {
+						return;
+					} else if (key === "\r") {
 						if (message.length === 0) return;
 						bot.sendMessage(message);
 						message = "";
-						process.stdout.write(`\x1b[1G${message}`);
-					} else if (key.toString() === "\x08") {
+						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
+					} else if (key === "\x08") {
 						message = message.substring(0, message.length - 1);
-						process.stdout.write(`\x1b[2K\x1b[1G${message}`);
+						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
 					} else {
 						message += key;
-						process.stdout.write(`\x1b[1G${message}`);
+						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
 					}
 				});
 
