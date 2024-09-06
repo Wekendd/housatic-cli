@@ -33,6 +33,13 @@ function botLocation() {
 	else return "lobby_other"; // In a different lobby or smth else
 }
 
+const customConsole = {
+    log: (...args) => {
+		chatlog.push(args.join(' '));
+		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
+    }
+};
+
 function reloadEvents(first) {
 	if (!bot) return;
 
@@ -41,6 +48,7 @@ function reloadEvents(first) {
 	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
 
 	const sandbox = {
+		console: customConsole,
 		register(event, callback) {
 			switch (event) {
 				case "house_spawn":
@@ -81,7 +89,7 @@ function reloadEvents(first) {
 	try {
 		vm.runInContext(script, context);
 	} catch (e) {
-		return console.log(`Scripting error! ${e}`);
+		return prompts.log.error(`Scripting error! ${e}`);
 	}
 
 	if (first) {
