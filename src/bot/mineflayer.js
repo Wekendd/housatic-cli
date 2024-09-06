@@ -64,13 +64,8 @@ function reloadEvents(first) {
 				case "chat":
 					bot.on("messagestr", (raw_message, username) => {
 						if (username !== "chat") return;
-						if (botLocation() !== "house") return;
-	
-						const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
-						if (!chatRegex.test(raw_message)) return;
-	
-						const { sender, message } = chatRegex.exec(raw_message).groups;
-						callback(sender, message);
+
+						callback(raw_message);
 					});
 					break;
 	
@@ -195,7 +190,6 @@ parentPort.on("message", (msg) => {
 
 			reloadEvents(false);
 
-			parentPort.postMessage({ type: BotCommands.RefreshDone });
 			break;
 		case BotCommands.Rename:
 			path = msg.path;
