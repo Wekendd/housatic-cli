@@ -4,6 +4,7 @@ const mineflayer = require("mineflayer");
 const prompts = require("@clack/prompts");
 const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
+const crypto = require("crypto");
 const fs = require("fs");
 const vm = require("vm");
 
@@ -33,7 +34,7 @@ function botLocation() {
 	else return "lobby_other"; // In a different lobby or smth else
 }
 
-const customConsole = {
+const custom_console = {
     log: (...args) => {
 		chatlog.push(args.join(' '));
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
@@ -45,52 +46,7 @@ function reloadEvents(first) {
 
 	if (!first) bot.removeAllListeners();
 
-	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
-
-	const sandbox = {
-		console: customConsole,
-		register(event, callback) {
-			switch (event) {
-				case "house_spawn":
-					bot.on("spawn", async () => {
-						await sleep(1000);
-						if (botLocation() !== "house") return;
-	
-						callback();
-					});
-					break;
-	
-				// event for chat since we want criterias + mineflayer chat messages are a bit goofy
-				case "chat":
-					bot.on("messagestr", (raw_message, username) => {
-						if (username !== "chat") return;
-						if (botLocation() !== "house") return;
-	
-						const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
-						if (!chatRegex.test(raw_message)) return;
-	
-						const { sender, message } = chatRegex.exec(raw_message).groups;
-						callback(sender, message);
-					});
-					break;
-	
-				default:
-					bot.on(event, (...args) => callback(...args));
-					break;
-			}
-		},
-		mineflayer: bot,
-		housatic: custom_actions, // custom events, custom methods, etc
-	};
-
-	const context = vm.createContext(sandbox);
-
-	// execute code in context of bot object
-	try {
-		vm.runInContext(script, context);
-	} catch (e) {
-		return prompts.log.error(`Scripting error! ${e}`);
-	}
+	loadScripts();
 
 	if (first) {
 		bot.once("login", () => {
@@ -166,6 +122,7 @@ async function initBot(first) {
 	reloadEvents(first);
 }
 
+// Bot control
 parentPort.on("message", (msg) => {
 	switch (msg.type) {
 		case BotCommands.Start:
@@ -210,7 +167,27 @@ parentPort.on("message", (msg) => {
 	}
 });
 
-const custom_actions = {
+function loadScripts() {
+	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
+
+	const sandbox = {
+		mineflayer: bot,
+		register: custom_events,
+		housatic: custom_methods,
+		console: custom_console,
+	};
+
+	const context = vm.createContext(sandbox);
+
+	// execute code in context of bot object
+	try {
+		vm.runInContext(script, context);
+	} catch (e) {
+		return prompts.log.error(`Scripting error! ${e}`);
+	}
+}
+
+const custom_methods = {
 	chat(message) {
 		let res;
 		let promise = new Promise((resolve, reject) => {
@@ -229,3 +206,43 @@ const custom_actions = {
 		});
 	}
 };
+
+const custom_events = (event, callback, criteria = null) => {
+	switch (event) {
+		case "house_spawn":
+			bot.on("spawn", async () => {
+				await sleep(1000);
+				if (botLocation() !== "house") return;
+
+				callback();
+			});
+			break;
+
+		// event for chat since we want criterias + mineflayer chat messages are a bit goofy
+		case "chat":
+			if (criteria !== null) {
+				const groups = [...criteria.matchAll(/{(\w+)}/g)].map(match => match[1]);
+				const regex = new RegExp(criteria.replace(/[-[\]()*+?.,\\^$|#\s]/g, '\\$&').replace(/{(\w+)}/g, '(?<$1>.+)'));
+
+				let id = crypto.randomUUID();
+				bot.addChatPattern(id, regex, { parse: true });
+				bot.on(`chat:${id}`, callback(...groups));
+			}
+
+			bot.on("messagestr", (raw_message, username) => {
+				if (username !== "chat") return;
+				if (botLocation() !== "house") return;
+
+				const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
+				if (!chatRegex.test(raw_message)) return;
+
+				const { sender, message } = chatRegex.exec(raw_message).groups;
+				callback(sender, message);
+			});
+			break;
+
+		default:
+			bot.on(event, (...args) => callback(...args));
+			break;
+	}
+}
