@@ -10,43 +10,25 @@ const vm = require("vm");
 
 const s = prompts.spinner();
 
+const script_events = [];
 let bot;
 let options;
 let chatlog = [];
 let config;
 let chatqueue = [];
 let ticks = 0;
-let events;
 let path;
 
 console.info = (info) => {
 	if (info == "[msa] Signed in with Microsoft") return;
 };
 
-function sleep(wait) {
-	return new Promise((resolve) => setTimeout(() => resolve(), wait));
-}
+/*
+// Events n stuff
+*/
 
-function botLocation() {
-	if (bot.scoreboard[1] === undefined) return "limbo"; // In limbo
-	if (bot.scoreboard[1].name === "Housing") return "lobby_housing"; // In the housing lobby
-	else if (bot.scoreboard[1].name === "housing") return "house"; // In a house
-	else return "lobby_other"; // In a different lobby or smth else
-}
-
-const custom_console = {
-    log: (...args) => {
-		chatlog.push(args.join(' '));
-		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
-    }
-};
-
-function reloadEvents(first) {
+function loadEvents(first) {
 	if (!bot) return;
-
-	if (!first) bot.removeAllListeners();
-
-	loadScripts();
 
 	if (first) {
 		bot.once("login", () => {
@@ -55,7 +37,7 @@ function reloadEvents(first) {
 		});
 	}
 
-	// required events to function
+	// Required events to function
 
 	// Autojoin commands
 	bot.on("spawn", async () => {
@@ -115,11 +97,16 @@ function reloadEvents(first) {
 			if (chatqueue.length > 0) ticks = 30;
 		}
 	});
+
+	// Load scripts
+	bot.once("spawn", () => {
+		loadScripts();
+	});
 }
 
 async function initBot(first) {
 	bot = mineflayer.createBot(options);
-	reloadEvents(first);
+	loadEvents(first);
 }
 
 // Bot control
@@ -148,11 +135,11 @@ parentPort.on("message", (msg) => {
 			config = msg.config;
 			path = msg.path;
 
-			if (bot) chatqueue.push({ message: "/hub housing" });
+			if (bot) {
+				chatqueue.push({ message: "/hub housing" });
+				loadScripts();
+			}
 
-			reloadEvents(false);
-
-			parentPort.postMessage({ type: BotCommands.RefreshDone });
 			break;
 		case BotCommands.Rename:
 			path = msg.path;
@@ -168,6 +155,13 @@ parentPort.on("message", (msg) => {
 });
 
 function loadScripts() {
+	// Remove old script listeners
+	if (script_events.length > 0)
+		script_events.forEach((event) => {
+			bot.removeListener(event.event, event.listener);
+		});
+
+	// Run script with context
 	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
 
 	const sandbox = {
@@ -179,13 +173,23 @@ function loadScripts() {
 
 	const context = vm.createContext(sandbox);
 
-	// execute code in context of bot object
 	try {
 		vm.runInContext(script, context);
 	} catch (e) {
 		return prompts.log.error(`Scripting error! ${e}`);
 	}
 }
+
+/*
+// Custom thingies
+*/
+
+const custom_console = {
+	log: (...args) => {
+		chatlog.push(args.join(" "));
+		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
+	},
+};
 
 const custom_methods = {
 	chat(message) {
@@ -194,7 +198,7 @@ const custom_methods = {
 			res = resolve;
 		});
 		chatqueue.push({ message: message, resolve: res });
-		return promise; 
+		return promise;
 	},
 	log(message) {
 		chatlog.push(message);
@@ -204,45 +208,58 @@ const custom_methods = {
 		return new Promise((resolve, reject) => {
 			setTimeout(resolve, length);
 		});
-	}
+	},
 };
 
 const custom_events = (event, callback, criteria = null) => {
 	switch (event) {
 		case "house_spawn":
-			bot.on("spawn", async () => {
+			const listener = async () => {
 				await sleep(1000);
 				if (botLocation() !== "house") return;
-
 				callback();
-			});
+			};
+			bot.on("spawn", listener);
+			script_events.push({ event: event, listener: listener });
 			break;
 
 		// event for chat since we want criterias + mineflayer chat messages are a bit goofy
 		case "chat":
 			if (criteria !== null) {
-				const groups = [...criteria.matchAll(/{(\w+)}/g)].map(match => match[1]);
-				const regex = new RegExp(criteria.replace(/[-[\]()*+?.,\\^$|#\s]/g, '\\$&').replace(/{(\w+)}/g, '(?<$1>.+)'));
+				const regex = new RegExp(criteria.replace(/[-[\]()*+?.,\\^$|#\s]/g, "\\$&").replace(/{(\w+)}/g, "(?<$1>.+)"));
 
 				let id = crypto.randomUUID();
 				bot.addChatPattern(id, regex, { parse: true });
-				bot.on(`chat:${id}`, callback(...groups));
+				const listener = (matches) => {
+					callback(...matches[0]);
+				};
+				bot.on(`chat:${id}`, listener);
+				script_events.push({ event: `chat:${id}`, listener: listener });
+
+				break;
 			}
 
-			bot.on("messagestr", (raw_message, username) => {
-				if (username !== "chat") return;
-				if (botLocation() !== "house") return;
-
-				const chatRegex = /^(?: \+ )?(?:(?:\[.+]) )?(?<sender>[a-zA-Z0-9_]{2,16}): (?<message>.+)/;
-				if (!chatRegex.test(raw_message)) return;
-
-				const { sender, message } = chatRegex.exec(raw_message).groups;
-				callback(sender, message);
-			});
-			break;
-
 		default:
-			bot.on(event, (...args) => callback(...args));
+			const listener2 = (...args) => {
+				callback(...args);
+			};
+			bot.on(event, listener2);
+			script_events.push({ event: event, listener: listener2 });
 			break;
 	}
+};
+
+/*
+// Utils
+*/
+
+function sleep(wait) {
+	return new Promise((resolve) => setTimeout(() => resolve(), wait));
+}
+
+function botLocation() {
+	if (bot.scoreboard[1] === undefined) return "limbo"; // In limbo
+	if (bot.scoreboard[1].name === "Housing") return "lobby_housing"; // In the housing lobby
+	else if (bot.scoreboard[1].name === "housing") return "house"; // In a house
+	else return "lobby_other"; // In a different lobby or smth else
 }
