@@ -42,28 +42,18 @@ module.exports = class Bot {
 		};
 	}
 
-	refresh() {
-		return new Promise((resolve, reject) => {
-			try {
-				readFile(`${this.path}/bot.json`, "utf-8").then((configraw) => {
-					this.config = JSON.parse(configraw);
+	async refresh() {
+		try {
+			this.config = JSON.parse(await readFile(`${this.path}/bot.json`, "utf-8"));
 
-					this.bot.postMessage({
-						type: BotCommands.Refresh,
-						config: this.config,
-						path: this.path,
-					});
-					
-					this.bot.on("message", (data) => {
-						if (data.type != BotCommands.RefreshDone) return;
-						resolve();
-					});
-				});
-			} catch (e) {
-				reject();
-				console.log(e);
-			}
-		});
+			this.bot.postMessage({
+				type: BotCommands.Refresh,
+				config: this.config,
+				path: this.path
+			});
+		} catch (e) {
+			reject();
+		}
 	}
 
 	start() {
@@ -143,5 +133,5 @@ async function rename_dir(oldPath, newPath) {
 		}
 
 		await rmdir(oldPath);
-	} catch (err) {}
+	} catch (err) { }
 }

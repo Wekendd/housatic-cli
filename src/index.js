@@ -180,9 +180,7 @@ async function control_bot(botindex) {
 
 		switch (action) {
 			case BotOptions.Refresh:
-				s.start("Refreshing bot");
-				await bot.refresh();
-				s.stop("Bot refreshed!");
+				bot.refresh();
 				continue controlmenu;
 
 			case BotOptions.Done:
