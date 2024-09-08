@@ -114,13 +114,18 @@ async function main() {
 					// bot manifest
 					await writeFile(
 						`${platformPath}/bots/${name}/bot.json`,
-						JSON.stringify({
-							house: {
-								autojoin: true,
-								owner: owner,
-								slot: slot,
+						JSON.stringify(
+							{
+								house: {
+									autojoin: true,
+									owner: owner,
+									slot: slot,
+								},
+								advanced_mode: false,
 							},
-						}, null, 2)
+							null,
+							2
+						)
 					);
 					// script file
 					await writeFile(`${platformPath}/bots/${name}/index.js`, scriptDefaultCode);
@@ -257,6 +262,7 @@ async function control_bot(botindex) {
 						{ value: ConfigureOptions.Rename, label: "Rename bot", hint: `Current value: ${bot.name}` },
 						{ value: ConfigureOptions.HouseOwner, label: "Change house owner", hint: `Current value: ${bot.config.house.owner}` },
 						{ value: ConfigureOptions.HouseSlot, label: "Change house slot", hint: `Current value: ${bot.config.house.slot}` },
+						{ value: ConfigureOptions.AdvancedMode, label: "Toggle Advanced Mode", hint: `Current value: ${bot.config.advanced_mode}` },
 						{ value: ConfigureOptions.Cancel, label: "Cancel" },
 					],
 				});
@@ -334,6 +340,39 @@ async function control_bot(botindex) {
 						s.stop(`Changed target house slot to ${new_slot}!`);
 
 						break;
+
+					case ConfigureOptions.AdvancedMode:
+						try {
+							if (bot.config.advanced_mode) {
+								upd_config = bot.config;
+								upd_config.advanced_mode = false;
+
+								await writeFile(`${bot.path}/bot.json`, JSON.stringify(upd_config, null, 2), (err) => {
+									if (err) return log.error("Error while writing to bot.json!", e.message);
+								});
+
+								log.success("Disabled advanced mode!");
+							} else {
+								let confirm_enable = await confirm({
+									message: "WARNING! Enabling advanced mode makes your computer vulerable to malicious scripts! Only use code you trust in Housatic scripts. Do you want to continue?",
+								});
+								if (isCancel(confirm_enable) || !confirm_enable) {
+									cancel("Canceled enabling advanced mode");
+									break;
+								}
+
+								upd_config = bot.config;
+								upd_config.advanced_mode = true;
+
+								await writeFile(`${bot.path}/bot.json`, JSON.stringify(upd_config, null, 2), (err) => {
+									if (err) return log.error("Error while writing to bot.json!", e.message);
+								});
+
+								log.success("Enabled advanced mode!");
+							}
+						} catch (e) {
+							console.log(e);
+						}
 				}
 				continue controlmenu;
 

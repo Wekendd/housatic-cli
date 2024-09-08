@@ -6,6 +6,7 @@ const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
 const crypto = require("crypto");
 const fs = require("fs");
+const { platformPath } = require("../path");
 const { NodeVM, VMScript } = require("vm2");
 
 const s = prompts.spinner();
@@ -166,8 +167,8 @@ function loadScripts() {
 
 	const vm = new NodeVM({
 		require: {
-			external: true,
-			root: path,
+			external: config.advanced_mode,
+			root: platformPath,
 		},
 		sandbox: {
 			mineflayer: bot,
