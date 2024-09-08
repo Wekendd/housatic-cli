@@ -6,7 +6,7 @@ const { writeFile } = require("node:fs/promises");
 const zlib = require("node:zlib");
 const crypto = require("crypto");
 const fs = require("fs");
-const vm = require("vm");
+const { NodeVM, VMScript } = require("vm2");
 
 const s = prompts.spinner();
 
@@ -42,8 +42,8 @@ function loadEvents(first) {
 	// Autojoin commands
 	bot.on("spawn", async () => {
 		await sleep(1000);
-		if (botLocation() === "limbo") return chatqueue.push("/hub housing");
-		if (botLocation() === "lobby_housing") {
+		if (getLocation() === "limbo") return chatqueue.push("/hub housing");
+		if (getLocation() === "lobby_housing") {
 			// check config
 			if (config.house?.autojoin) {
 				return chatqueue.push({ message: `/visit ${config.house.owner}` });
@@ -53,7 +53,7 @@ function loadEvents(first) {
 
 	// Autojoin visit GUI
 	bot.on("windowOpen", (window) => {
-		if (botLocation() !== "lobby_housing") return;
+		if (getLocation() !== "lobby_housing") return;
 		if (!config.house?.autojoin) return;
 		window.slots = window.slots.filter((n) => n); // filter out blank slots
 		bot.simpleClick.leftMouse(window.slots[config.house.slot - 1].slot);
@@ -92,7 +92,7 @@ function loadEvents(first) {
 		ticks--;
 		if (ticks <= 0) {
 			let message = chatqueue.shift();
-			bot.chat(message.message);
+			bot.chat(String(message.message));
 			if (message.resolve) message.resolve();
 			if (chatqueue.length > 0) ticks = 30;
 		}
@@ -162,19 +162,25 @@ function loadScripts() {
 		});
 
 	// Run script with context
-	const script = fs.readFileSync(`${path}/index.js`, "utf-8");
+	const scriptPath = `${path}/index.js`;
 
-	const sandbox = {
-		mineflayer: bot,
-		register: custom_events,
-		housatic: custom_methods,
-		console: custom_console,
-	};
+	const vm = new NodeVM({
+		require: {
+			external: true,
+			root: path,
+		},
+		sandbox: {
+			mineflayer: bot,
+			register: custom_events,
+			housatic: custom_methods,
+			console: custom_console,
+		},
+	});
 
-	const context = vm.createContext(sandbox);
+	const script = new VMScript(fs.readFileSync(scriptPath, "utf-8"), { filename: scriptPath });
 
 	try {
-		vm.runInContext(script, context);
+		vm.run(script);
 	} catch (e) {
 		return prompts.log.error(`Scripting error! ${e}`);
 	}
@@ -209,6 +215,7 @@ const custom_methods = {
 			setTimeout(resolve, length);
 		});
 	},
+	getLocation,
 };
 
 const custom_events = (event, callback, criteria = null) => {
@@ -216,7 +223,7 @@ const custom_events = (event, callback, criteria = null) => {
 		case "house_spawn":
 			const listener = async () => {
 				await sleep(1000);
-				if (botLocation() !== "house") return;
+				if (getLocation() !== "house") return;
 				callback();
 			};
 			bot.on("spawn", listener);
@@ -257,7 +264,7 @@ function sleep(wait) {
 	return new Promise((resolve) => setTimeout(() => resolve(), wait));
 }
 
-function botLocation() {
+function getLocation() {
 	if (bot.scoreboard[1] === undefined) return "limbo"; // In limbo
 	if (bot.scoreboard[1].name === "Housing") return "lobby_housing"; // In the housing lobby
 	else if (bot.scoreboard[1].name === "housing") return "house"; // In a house
