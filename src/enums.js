@@ -27,7 +27,8 @@ module.exports = {
         Rename: 0,
         HouseOwner: 1,
         HouseSlot: 2,
-        AdvancedMode: 3,
-        Cancel: 4,
+        AntiAFK: 3,
+        AdvancedMode: 4,
+        Cancel: 5,
     }
 }

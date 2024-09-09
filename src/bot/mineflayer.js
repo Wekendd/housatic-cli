@@ -45,10 +45,7 @@ function loadEvents(first) {
 		await sleep(1000);
 		if (getLocation() === "limbo") return chatqueue.push("/hub housing");
 		if (getLocation() === "lobby_housing") {
-			// check config
-			if (config.house?.autojoin) {
-				return chatqueue.push({ message: `/visit ${config.house.owner}` });
-			}
+			if (config.house?.autojoin) return chatqueue.push({ message: `/visit ${config.house.owner}` });
 		}
 	});
 
@@ -65,6 +62,10 @@ function loadEvents(first) {
 		if (username !== "chat") return;
 		chatlog.push(message);
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
+
+		if (config.anti_afk && (message === "You are AFK. Move around to return from AFK." || message === "A kick occurred in your connection, so you have been routed to limbo!")) {
+			housatic.chat(`/lobby housing`);
+		}
 	});
 
 	// Zip log
@@ -101,6 +102,14 @@ function loadEvents(first) {
 
 	// Load scripts
 	bot.once("spawn", () => {
+		// Custom chat events
+		bot.addChatPattern(
+			"house_crash",
+			/(?:An exception occurred in your connection, so you were put in the Housing Lobby!)|(?:A kick occurred in your connection, so you were put in the Housing Lobby!)|(?:A disconnect occurred in your connection, so you were put in the Housing Lobby!)/
+		);
+		// bot.addChatPattern("all", /.+/);
+		// bot.addChatPattern("message", /^From(?: \[(?<rank>VIP\+?|MVP\+?\+?)\])? (?<username>[a-zA-Z0-9_]{2,16}): (?<message>.+)$/m, { parse: true });
+
 		loadScripts();
 	});
 }
@@ -222,37 +231,41 @@ const custom_methods = {
 const custom_events = (event, callback, criteria = null) => {
 	switch (event) {
 		case "house_spawn":
-			const listener = async () => {
+			const house_spawn_listener = async () => {
 				await sleep(1000);
 				if (getLocation() !== "house") return;
 				callback();
 			};
-			bot.on("spawn", listener);
-			script_events.push({ event: event, listener: listener });
+			bot.on("spawn", house_spawn_listener);
+			script_events.push({ event: event, listener: house_spawn_listener });
 			break;
 
-		// event for chat since we want criterias + mineflayer chat messages are a bit goofy
+		case "house_crash":
+			const house_crash_listener = () => callback();
+			bot.on("chat:house_crash", house_crash_listener);
+			script_events.push({ event: `chat:house_crash`, listener: house_crash_listener });
+
 		case "chat":
 			if (criteria !== null) {
 				const regex = new RegExp(criteria.replace(/[-[\]()*+?.,\\^$|#\s]/g, "\\$&").replace(/{(\w+)}/g, "(?<$1>.+)"));
 
 				let id = crypto.randomUUID();
 				bot.addChatPattern(id, regex, { parse: true });
-				const listener = (matches) => {
+				const chat_criteria_listener = (matches) => {
 					callback(...matches[0]);
 				};
-				bot.on(`chat:${id}`, listener);
-				script_events.push({ event: `chat:${id}`, listener: listener });
+				bot.on(`chat:${id}`, chat_criteria_listener);
+				script_events.push({ event: `chat:${id}`, listener: chat_criteria_listener });
 
 				break;
 			}
 
 		default:
-			const listener2 = (...args) => {
+			const mineflayer_listener = (...args) => {
 				callback(...args);
 			};
-			bot.on(event, listener2);
-			script_events.push({ event: event, listener: listener2 });
+			bot.on(event, mineflayer_listener);
+			script_events.push({ event: event, listener: mineflayer_listener });
 			break;
 	}
 };

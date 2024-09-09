@@ -121,6 +121,7 @@ async function main() {
 									owner: owner,
 									slot: slot,
 								},
+								anti_afk: true,
 								advanced_mode: false,
 							},
 							null,
@@ -262,6 +263,7 @@ async function control_bot(botindex) {
 						{ value: ConfigureOptions.Rename, label: "Rename bot", hint: `Current value: ${bot.name}` },
 						{ value: ConfigureOptions.HouseOwner, label: "Change house owner", hint: `Current value: ${bot.config.house.owner}` },
 						{ value: ConfigureOptions.HouseSlot, label: "Change house slot", hint: `Current value: ${bot.config.house.slot}` },
+						{ value: ConfigureOptions.AntiAFK, label: "Toggle Anti AFK", hint: `Current value: ${bot.config.anti_afk}` },
 						{ value: ConfigureOptions.AdvancedMode, label: "Toggle Advanced Mode", hint: `Current value: ${bot.config.advanced_mode}` },
 						{ value: ConfigureOptions.Cancel, label: "Cancel" },
 					],
@@ -373,6 +375,16 @@ async function control_bot(botindex) {
 						} catch (e) {
 							console.log(e);
 						}
+
+					case ConfigureOptions.AntiAFK:
+						upd_config = bot.config;
+						upd_config.anti_afk = !upd_config.anti_afk;
+
+						await writeFile(`${bot.path}/bot.json`, JSON.stringify(upd_config, null, 2), (err) => {
+							if (err) return log.error("Error while writing to bot.json!", e.message);
+						});
+
+						log.success(`${upd_config.anti_afk ? "Enabled" : "Disabled"} anti AFK!`);
 				}
 				continue controlmenu;
 
