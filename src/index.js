@@ -32,7 +32,6 @@ async function main() {
 
 			if (action == MainOptions.Exit) break mainmenu;
 
-			let bot;
 			switch (action) {
 				case MainOptions.Control:
 					await refresh_bots();
@@ -375,6 +374,7 @@ async function control_bot(botindex) {
 						} catch (e) {
 							console.log(e);
 						}
+                        break;
 
 					case ConfigureOptions.AntiAFK:
 						upd_config = bot.config;
@@ -385,6 +385,8 @@ async function control_bot(botindex) {
 						});
 
 						log.success(`${upd_config.anti_afk ? "Enabled" : "Disabled"} anti AFK!`);
+
+                        break;
 				}
 				continue controlmenu;
 		}

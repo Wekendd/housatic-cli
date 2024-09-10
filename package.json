@@ -6,7 +6,8 @@
   "pkg": {
     "scripts": "src/**/*.js",
     "assets": [
-      "src/**/*.js"
+      "src/**/*.js",
+      "node_modules/vm2/lib/setup-sandbox.js"
     ],
     "outputPath": "../",
     "targets": [
@@ -28,9 +29,7 @@
     "@clack/prompts": "^0.7.0",
     "fs": "^0.0.1-security",
     "mineflayer": "^4.20.1",
-    "require-like": "^0.1.2",
     "tailing-stream": "^0.2.0",
-    "uri-js": "^4.2.2",
     "vm2": "^3.9.19"
   }
 }
