@@ -7,7 +7,7 @@ const { existsSync } = require("node:fs");
 const { MainOptions, BotOptions, ConfigureOptions } = require("./enums");
 const platformPath = require("./path");
 
-const scriptDefaultCode = `register("house_spawn", () => {
+const scriptDefaultCode = `register("houseSpawn", () => {
 	housatic.chat("Hello world!");
 });
 `;

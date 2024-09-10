@@ -140,11 +140,12 @@ parentPort.on("message", (msg) => {
 			bot.quit("Player Quit");
 			break;
 		case BotCommands.Refresh:
-			config = msg.config;
+			const house_same = JSON.stringify(config?.house) === JSON.stringify(msg.config.house) ? true : false;
+            config = msg.config;
 			path = msg.path;
 
 			if (bot) {
-				chatqueue.push({ message: "/hub housing" });
+				if (!house_same) chatqueue.push({ message: "/hub housing" });
 				loadScripts();
 			}
 
