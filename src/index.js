@@ -164,16 +164,16 @@ async function control_bot(botindex) {
 		let paneloptions = [
 			...(bot.status
 				? [
-						{ value: BotOptions.Refresh, label: "Refresh bot" },
-						{ value: BotOptions.Stop, label: "Stop bot" },
+						{ value: BotOptions.Refresh, label: "Refresh scripts" },
+						{ value: BotOptions.Stop, label: "Stop" },
 				  ]
 				: [
-						{ value: BotOptions.Start, label: "Start bot" },
+						{ value: BotOptions.Start, label: "Start" },
 						{ value: BotOptions.LogOut, label: "Log Out" },
 				  ]),
 			{ value: BotOptions.Console, label: "View Console" },
-			{ value: BotOptions.Configure, label: "Configure bot" },
-			{ value: BotOptions.Done, label: "Done (return to main menu)" },
+			{ value: BotOptions.Configure, label: "Configure" },
+			{ value: BotOptions.Back, label: "Back", hint: "to main menu" },
 		];
 
 		const action = await select({
@@ -189,7 +189,7 @@ async function control_bot(botindex) {
 				bot.refresh();
 				continue controlmenu;
 
-			case BotOptions.Done:
+			case BotOptions.Back:
 				break controlmenu;
 
 			case BotOptions.Start:
@@ -260,12 +260,12 @@ async function control_bot(botindex) {
 				let setting = await select({
 					message: `Configuring ${bot.name}`,
 					options: [
-						{ value: ConfigureOptions.Rename, label: "Rename bot", hint: `Current value: ${bot.name}` },
-						{ value: ConfigureOptions.HouseOwner, label: "Change house owner", hint: `Current value: ${bot.config.house.owner}` },
-						{ value: ConfigureOptions.HouseSlot, label: "Change house slot", hint: `Current value: ${bot.config.house.slot}` },
-						{ value: ConfigureOptions.AntiAFK, label: "Toggle Anti AFK", hint: `Current value: ${bot.config.anti_afk}` },
-						{ value: ConfigureOptions.AdvancedMode, label: "Toggle Advanced Mode", hint: `Current value: ${bot.config.advanced_mode}` },
-						{ value: ConfigureOptions.Cancel, label: "Cancel" },
+						{ value: ConfigureOptions.Rename, label: "Rename", hint: `Currently: ${bot.name}` },
+						{ value: ConfigureOptions.HouseOwner, label: "Change house owner", hint: `Currently: ${bot.config.house.owner}` },
+						{ value: ConfigureOptions.HouseSlot, label: "Change house slot", hint: `Currently: ${bot.config.house.slot}` },
+						{ value: ConfigureOptions.AntiAFK, label: "Toggle Anti AFK", hint: `Currently: ${bot.config.anti_afk}` },
+						{ value: ConfigureOptions.AdvancedMode, label: "Toggle Advanced Mode", hint: `Currently: ${bot.config.advanced_mode}` },
+						{ value: ConfigureOptions.Back, label: "Back", hint: "to bot panel" },
 					],
 				});
 
@@ -386,10 +386,6 @@ async function control_bot(botindex) {
 
 						log.success(`${upd_config.anti_afk ? "Enabled" : "Disabled"} anti AFK!`);
 				}
-				continue controlmenu;
-
-			default:
-				log.warning("No functionality here yet lol");
 				continue controlmenu;
 		}
 	}

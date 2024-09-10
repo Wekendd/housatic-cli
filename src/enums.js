@@ -18,10 +18,10 @@ module.exports = {
         Start: 0,
         Stop: 1,
         Refresh: 2,
-        Configure: 3,
-        Console: 4,
-        Done: 5,
-        LogOut: 6,
+        LogOut: 3,
+        Configure: 4,
+        Console: 5,
+        Back: 6,
     },
     ConfigureOptions: {
         Rename: 0,
@@ -29,6 +29,6 @@ module.exports = {
         HouseSlot: 2,
         AntiAFK: 3,
         AdvancedMode: 4,
-        Cancel: 5,
+        Back: 5,
     }
 }

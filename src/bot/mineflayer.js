@@ -102,13 +102,11 @@ function loadEvents(first) {
 
 	// Load scripts
 	bot.once("spawn", () => {
-		// Custom chat events
+		// Built-in custom chat events
 		bot.addChatPattern(
-			"house_crash",
+			"houseCrash",
 			/(?:An exception occurred in your connection, so you were put in the Housing Lobby!)|(?:A kick occurred in your connection, so you were put in the Housing Lobby!)|(?:A disconnect occurred in your connection, so you were put in the Housing Lobby!)/
 		);
-		// bot.addChatPattern("all", /.+/);
-		// bot.addChatPattern("message", /^From(?: \[(?<rank>VIP\+?|MVP\+?\+?)\])? (?<username>[a-zA-Z0-9_]{2,16}): (?<message>.+)$/m, { parse: true });
 
 		loadScripts();
 	});
@@ -177,7 +175,7 @@ function loadScripts() {
 	const vm = new NodeVM({
 		require: {
 			external: config.advanced_mode,
-			root: platformPath,
+			root: path,
 		},
 		sandbox: {
 			mineflayer: bot,
@@ -230,7 +228,7 @@ const custom_methods = {
 
 const custom_events = (event, callback, criteria = null) => {
 	switch (event) {
-		case "house_spawn":
+		case "houseSpawn":
 			const house_spawn_listener = async () => {
 				await sleep(1000);
 				if (getLocation() !== "house") return;
@@ -240,10 +238,10 @@ const custom_events = (event, callback, criteria = null) => {
 			script_events.push({ event: event, listener: house_spawn_listener });
 			break;
 
-		case "house_crash":
+		case "houseCrash":
 			const house_crash_listener = () => callback();
-			bot.on("chat:house_crash", house_crash_listener);
-			script_events.push({ event: `chat:house_crash`, listener: house_crash_listener });
+			bot.on("chat:houseCrash", house_crash_listener);
+			script_events.push({ event: `chat:houseCrash`, listener: house_crash_listener });
 
 		case "chat":
 			if (criteria !== null) {
@@ -254,8 +252,8 @@ const custom_events = (event, callback, criteria = null) => {
 				const chat_criteria_listener = (matches) => {
 					callback(...matches[0]);
 				};
-				bot.on(`chat:${id}`, chat_criteria_listener);
-				script_events.push({ event: `chat:${id}`, listener: chat_criteria_listener });
+				bot.on(`chat:custom_${id}`, chat_criteria_listener);
+				script_events.push({ event: `chat:custom_${id}`, listener: chat_criteria_listener });
 
 				break;
 			}
