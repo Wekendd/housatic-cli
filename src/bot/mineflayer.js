@@ -249,7 +249,7 @@ const custom_events = (event, callback, criteria = null) => {
 				const regex = new RegExp(criteria.replace(/[-[\]()*+?.,\\^$|#\s]/g, "\\$&").replace(/{(\w+)}/g, "(?<$1>.+)"));
 
 				let id = crypto.randomUUID();
-				bot.addChatPattern(id, regex, { parse: true });
+				bot.addChatPattern(`custom_${id}`, regex, { parse: true });
 				const chat_criteria_listener = (matches) => {
 					callback(...matches[0]);
 				};
