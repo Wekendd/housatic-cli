@@ -27,6 +27,7 @@
   "type": "commonjs",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
+    "bottleneck": "^2.19.5",
     "fs": "^0.0.1-security",
     "mineflayer": "^4.20.1",
     "tailing-stream": "^0.2.0",

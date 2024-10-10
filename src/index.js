@@ -228,6 +228,7 @@ async function control_bot(botindex) {
 					} else if (key === "\r") {
 						if (message.length === 0) return;
 						bot.sendMessage(message);
+						
 						message = "";
 						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
 					} else if (key === "\x08") {

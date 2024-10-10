@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const { platformPath } = require("../path");
 const { NodeVM, VMScript } = require("vm2");
+const Bottleneck = require("bottleneck");
 
 const s = prompts.spinner();
 
@@ -16,13 +17,33 @@ let bot;
 let options;
 let chatlog = [];
 let config;
-let chatqueue = [];
-let ticks = 0;
 let path;
 
 console.info = (info) => {
 	if (info == "[msa] Signed in with Microsoft") return;
 };
+
+// Chat queue
+const chatQueueSettings = {
+	maxConcurrent: 1,
+	minTime: 0,
+	resivoir: 10,
+	reservoirIncreaseInterval: 1000,
+	reservoirIncreaseAmount: 1,
+	reservoirIncreaseMaximum: 10,
+}
+
+let chatQueue = new Bottleneck(chatQueueSettings);
+
+const removeAllJobs = async function (limiter, settings) {
+	await limiter.stop({ dropWaitingJobs: true });
+	const newLimiter = new Bottleneck(settings);
+	return newLimiter;
+};
+
+async function sendChat(message) {
+	return await chatQueue.schedule(() => bot.chat(message));
+}
 
 /*
 // Events n stuff
@@ -43,9 +64,9 @@ function loadEvents(first) {
 	// Autojoin commands
 	bot.on("spawn", async () => {
 		await sleep(1000);
-		if (getLocation() === "limbo") return chatqueue.push("/hub housing");
+		if (getLocation() === "limbo") return sendChat("/hub housing");
 		if (getLocation() === "lobby_housing") {
-			if (config.house?.autojoin) return chatqueue.push({ message: `/visit ${config.house.owner}` });
+			if (config.house?.autojoin) return sendChat(`/visit ${config.house.owner}`);
 		}
 	});
 
@@ -64,7 +85,7 @@ function loadEvents(first) {
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 
 		if (config.anti_afk && (message === "You are AFK. Move around to return from AFK." || message === "A kick occurred in your connection, so you have been routed to limbo!")) {
-			housatic.chat(`/lobby housing`);
+			custom_methods.chat(`/lobby housing`);
 		}
 	});
 
@@ -88,18 +109,6 @@ function loadEvents(first) {
 		bot.quit();
 	});
 
-	// bot chat queue
-	bot.on("physicsTick", () => {
-		if (chatqueue.length == 0) return;
-		ticks--;
-		if (ticks <= 0) {
-			let message = chatqueue.shift();
-			bot.chat(String(message.message));
-			if (message.resolve) message.resolve();
-			if (chatqueue.length > 0) ticks = 30;
-		}
-	});
-
 	// Load scripts
 	bot.once("spawn", () => {
 		// Built-in custom chat events
@@ -118,10 +127,9 @@ async function initBot(first) {
 }
 
 // Bot control
-parentPort.on("message", (msg) => {
+parentPort.on("message", async (msg) => {
 	switch (msg.type) {
 		case BotCommands.Start:
-			chatqueue = [];
 			chatlog = [];
 			options = msg.options;
 			options.onMsaCode = (data) => {
@@ -137,15 +145,17 @@ parentPort.on("message", (msg) => {
 			initBot(true);
 			break;
 		case BotCommands.Stop:
+			chatQueue = await removeAllJobs(chatQueue, chatQueueSettings);
 			bot.quit("Player Quit");
 			break;
 		case BotCommands.Refresh:
+			chatQueue = await removeAllJobs(chatQueue, chatQueueSettings);
 			const house_same = JSON.stringify(config?.house) === JSON.stringify(msg.config.house) ? true : false;
-            config = msg.config;
+			config = msg.config;
 			path = msg.path;
 
 			if (bot) {
-				if (!house_same) chatqueue.push({ message: "/hub housing" });
+				if (!house_same) sendChat("/hub housing");
 				loadScripts();
 			}
 
@@ -157,7 +167,7 @@ parentPort.on("message", (msg) => {
 			} catch (e) {}
 			break;
 		case BotCommands.SendMessage:
-			chatqueue.push({ message: msg.message });
+			sendChat(msg.message);
 		default:
 			break;
 	}
@@ -207,13 +217,9 @@ const custom_console = {
 };
 
 const custom_methods = {
-	chat(message) {
-		let res;
-		let promise = new Promise((resolve, reject) => {
-			res = resolve;
-		});
-		chatqueue.push({ message: message, resolve: res });
-		return promise;
+	async chat(message) {
+		await sendChat(message);
+		return;
 	},
 	log(message) {
 		chatlog.push(message);
