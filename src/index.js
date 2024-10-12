@@ -231,10 +231,10 @@ async function control_bot(botindex) {
 						
 						message = "";
 						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
-					} else if (key === "\x08") {
+					} else if (key === "\x08" || key === "\x7F") {
 						message = message.substring(0, message.length - 1);
 						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
-					} else {
+					} else if (key.charCodeAt(0) >= 32 && key.charCodeAt(0) <= 126) { // Only add printable characters
 						message += key;
 						process.stdout.write(`\x1b[2K\x1b[1G\x1b[32mType to chat: \x1b[0m${message}`);
 					}
