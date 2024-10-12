@@ -23,27 +23,30 @@ console.info = (info) => {
 	if (info == "[msa] Signed in with Microsoft") return;
 };
 
-// Chat queue
-const chatQueueSettings = {
+
+// Chat rate limiter
+drip_settings = {
+	maxConcurrent: 1,
+	minTime: 1000,
+};
+
+burst_settings = {
 	maxConcurrent: 1,
 	minTime: 0,
-	resivoir: 10,
+	reservoir: 9,
 	reservoirIncreaseInterval: 1000,
 	reservoirIncreaseAmount: 1,
-	reservoirIncreaseMaximum: 10,
+	reservoirIncreaseMaximum: 9,
 }
 
-let chatQueue = new Bottleneck(chatQueueSettings);
+let drip_queue = new Bottleneck(drip_settings);
+let burst_queue = new Bottleneck(burst_settings);
 
-const removeAllJobs = async function (limiter, settings) {
+async function resetLimiter(limiter, settings) {
 	await limiter.stop({ dropWaitingJobs: true });
 	const newLimiter = new Bottleneck(settings);
 	return newLimiter;
 };
-
-async function sendChat(message) {
-	return await chatQueue.schedule(() => bot.chat(message));
-}
 
 /*
 // Events n stuff
@@ -64,9 +67,9 @@ function loadEvents(first) {
 	// Autojoin commands
 	bot.on("spawn", async () => {
 		await sleep(1000);
-		if (getLocation() === "limbo") return sendChat("/hub housing");
+		if (getLocation() === "limbo") return custom_methods.burstChat("/hub housing");
 		if (getLocation() === "lobby_housing") {
-			if (config.house?.autojoin) return sendChat(`/visit ${config.house.owner}`);
+			if (config.house?.autojoin) return custom_methods.burstChat(`/visit ${config.house.owner}`);
 		}
 	});
 
@@ -85,7 +88,7 @@ function loadEvents(first) {
 		writeFile(`${path}/logs/latest.log`, chatlog.join("\n"));
 
 		if (config.anti_afk && (message === "You are AFK. Move around to return from AFK." || message === "A kick occurred in your connection, so you have been routed to limbo!")) {
-			custom_methods.chat(`/lobby housing`);
+			custom_methods.burstChat(`/lobby housing`);
 		}
 	});
 
@@ -145,17 +148,19 @@ parentPort.on("message", async (msg) => {
 			initBot(true);
 			break;
 		case BotCommands.Stop:
-			chatQueue = await removeAllJobs(chatQueue, chatQueueSettings);
+			drip_queue = await drip_queue.stop({ dropWaitingJobs: true });
+			burst_queue = await burst_queue.stop({ dropWaitingJobs: true });
 			bot.quit("Player Quit");
 			break;
 		case BotCommands.Refresh:
-			chatQueue = await removeAllJobs(chatQueue, chatQueueSettings);
 			const house_same = JSON.stringify(config?.house) === JSON.stringify(msg.config.house) ? true : false;
 			config = msg.config;
 			path = msg.path;
 
 			if (bot) {
-				if (!house_same) sendChat("/hub housing");
+				drip_queue = await resetLimiter(drip_queue, drip_settings);
+				burst_queue = await resetLimiter(burst_queue, burst_settings);
+				if (!house_same) custom_methods.burstChat("/hub housing");
 				loadScripts();
 			}
 
@@ -167,7 +172,7 @@ parentPort.on("message", async (msg) => {
 			} catch (e) {}
 			break;
 		case BotCommands.SendMessage:
-			sendChat(msg.message);
+			custom_methods.burstChat(msg.message);
 		default:
 			break;
 	}
@@ -217,8 +222,12 @@ const custom_console = {
 };
 
 const custom_methods = {
-	async chat(message) {
-		await sendChat(message);
+	async leakChat(message) {
+		await drip_queue.schedule(() => bot.chat(message));
+		return;
+	},
+	async burstChat(message) {
+		await burst_queue.schedule(() => bot.chat(message));
 		return;
 	},
 	log(message) {
