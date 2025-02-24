@@ -7,6 +7,8 @@
 A user-friendly bot manager for **Hypixel Housing**.
 </div>
 
+> [!CAUTION]
+> Hypixel has recently explicitly stated that automated bots are against Housing rules. While they have expressed that internal moderation has not changed, this project is technically bannable and therefore we do not recommend using it.
 
 ## About
 
